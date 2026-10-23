@@ -1,0 +1,47 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Badge (Yellow patterned starburst / rounded polygon) -->
+  <rect x="10" y="10" width="180" height="180" rx="40" fill="#FFDC33" />
+  <circle cx="100" cy="100" r="82" stroke="#FFF7C2" stroke-width="6" stroke-dasharray="10 6" />
+
+  <!-- Playful Cyan Gaming Character / Mascot -->
+  <g id="mascot">
+    <!-- Ears / Antennas -->
+    <path d="M 50 70 L 30 40 C 25 35 35 25 45 35 L 65 60 Z" fill="#00C3FF" stroke="#0088CC" stroke-width="3" />
+    <path d="M 150 70 L 170 40 C 175 35 165 25 155 35 L 135 60 Z" fill="#00C3FF" stroke="#0088CC" stroke-width="3" />
+    <circle cx="33" cy="33" r="7" fill="#FF4D4D" />
+    <circle cx="167" cy="33" r="7" fill="#FF4D4D" />
+
+    <!-- Head / Body -->
+    <ellipse cx="100" cy="110" rx="60" ry="52" fill="#00C3FF" stroke="#0088CC" stroke-width="4" />
+    <!-- Belly Accent -->
+    <ellipse cx="100" cy="120" rx="36" ry="30" fill="#E0F7FF" />
+
+    <!-- Headset Band & Cups -->
+    <path d="M 42 105 C 40 50, 160 50, 158 105" fill="none" stroke="#1E293B" stroke-width="10" stroke-linecap="round" />
+    <rect x="34" y="90" width="16" height="32" rx="8" fill="#1E293B" />
+    <rect x="150" y="90" width="16" height="32" rx="8" fill="#1E293B" />
+    <rect x="38" y="96" width="8" height="20" rx="4" fill="#FFDC33" />
+    <rect x="154" y="96" width="8" height="20" rx="4" fill="#FFDC33" />
+
+    <!-- Cheerful Eyes -->
+    <ellipse cx="80" cy="100" rx="9" ry="12" fill="#1E293B" />
+    <ellipse cx="120" cy="100" rx="9" ry="12" fill="#1E293B" />
+    <!-- Eye Catchlights -->
+    <circle cx="77" cy="96" r="3.5" fill="#FFFFFF" />
+    <circle cx="117" cy="96" r="3.5" fill="#FFFFFF" />
+    <circle cx="82" cy="104" r="1.5" fill="#FFFFFF" />
+    <circle cx="122" cy="104" r="1.5" fill="#FFFFFF" />
+
+    <!-- Rosy Cheeks -->
+    <ellipse cx="68" cy="112" rx="7" ry="5" fill="#FF7A8A" opacity="0.8" />
+    <ellipse cx="132" cy="112" rx="7" ry="5" fill="#FF7A8A" opacity="0.8" />
+
+    <!-- Cheerful Open Smile -->
+    <path d="M 86 114 Q 100 132 114 114 Z" fill="#D91E36" stroke="#1E293B" stroke-width="2.5" />
+    <!-- Tongue -->
+    <path d="M 92 122 Q 100 128 108 122 Q 100 130 92 122 Z" fill="#FF7A8A" />
+
+    <!-- Gaming Controller Sparkles / Floating Icons -->
+    <path d="M 50 152 Q 60 142 70 152 T 90 152" fill="none" stroke="#0088CC" stroke-width="3" stroke-linecap="round" />
+  </g>
+</svg>

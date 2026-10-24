@@ -137,10 +137,7 @@ class LoginScreen extends StatelessWidget {
                           isLoading: authViewModel.isAuthenticating &&
                               authViewModel.activeProvider == AuthProviderType.google,
                           onPressed: () async {
-                            final success = await authViewModel.loginWithGoogle();
-                            if (success && context.mounted) {
-                              _showSuccessDialog(context, authViewModel.user!);
-                            }
+                            await authViewModel.loginWithGoogle();
                           },
                         ),
 
@@ -152,10 +149,7 @@ class LoginScreen extends StatelessWidget {
                           isLoading: authViewModel.isAuthenticating &&
                               authViewModel.activeProvider == AuthProviderType.facebook,
                           onPressed: () async {
-                            final success = await authViewModel.loginWithFacebook();
-                            if (success && context.mounted) {
-                              _showSuccessDialog(context, authViewModel.user!);
-                            }
+                            await authViewModel.loginWithFacebook();
                           },
                         ),
 
@@ -171,10 +165,7 @@ class LoginScreen extends StatelessWidget {
                               isLoading: authViewModel.isAuthenticating &&
                                   authViewModel.activeProvider == AuthProviderType.apple,
                               onPressed: () async {
-                                final success = await authViewModel.loginWithApple();
-                                if (success && context.mounted) {
-                                  _showSuccessDialog(context, authViewModel.user!);
-                                }
+                                await authViewModel.loginWithApple();
                               },
                             ),
                             const SizedBox(width: 24),
@@ -184,10 +175,7 @@ class LoginScreen extends StatelessWidget {
                               isLoading: authViewModel.isAuthenticating &&
                                   authViewModel.activeProvider == AuthProviderType.twitter,
                               onPressed: () async {
-                                final success = await authViewModel.loginWithTwitter();
-                                if (success && context.mounted) {
-                                  _showSuccessDialog(context, authViewModel.user!);
-                                }
+                                await authViewModel.loginWithTwitter();
                               },
                             ),
                           ],
@@ -241,22 +229,6 @@ class LoginScreen extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
-  }
-
-  void _showSuccessDialog(BuildContext context, UserProfile user) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Welcome to Ab-Play!'),
-        content: Text('Logged in as ${user.displayName} (${user.email ?? user.id})'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

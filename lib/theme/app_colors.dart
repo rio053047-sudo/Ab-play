@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  // Brand Main Theme Colors
+  static const Color primary = Color(0xFF7C4DFF);
+  static const Color secondary = Color(0xFF29B6F6);
+
   // Primary background is pure white matching WePlay reference
   static const Color background = Color(0xFFFFFFFF);
 

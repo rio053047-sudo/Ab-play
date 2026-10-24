@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import '../theme/app_colors.dart';
 
 class AppTypography {
   static const String fontFamily = 'Roboto';
+
+  static const TextStyle titleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: AppColors.primaryText,
+  );
+
+  static const TextStyle captionStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: AppColors.secondaryText,
+  );
 
   static const TextStyle titleBold = TextStyle(
     fontSize: 28,

@@ -18,6 +18,8 @@ class AuthViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   AuthProviderType? get activeProvider => _activeProvider;
 
+  bool get isAuthenticated => _status == AuthStatus.authenticated;
+  bool get isLoggedIn => _status == AuthStatus.authenticated;
   bool get isAuthenticating => _status == AuthStatus.authenticating;
 
   void clearError() {

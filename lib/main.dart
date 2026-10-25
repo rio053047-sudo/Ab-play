@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/login_screen.dart';
+import 'screens/main_navigation_shell.dart';
 import 'services/real_auth_service.dart';
 import 'theme/app_theme.dart';
 import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/home_viewmodel.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,12 +23,22 @@ class AbPlayApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authService: RealAuthService()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(),
+        ),
       ],
       child: MaterialApp(
         title: 'Ab-Play',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const LoginScreen(),
+        home: Consumer<AuthViewModel>(
+          builder: (context, authVM, child) {
+            if (authVM.isLoggedIn) {
+              return const MainNavigationShell();
+            }
+            return const LoginScreen();
+          },
+        ),
       ),
     );
   }

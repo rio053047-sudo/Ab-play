@@ -3,6 +3,7 @@ enum AuthProviderType {
   facebook,
   apple,
   twitter,
+  phone,
 }
 
 enum AuthStatus {
@@ -16,6 +17,7 @@ class UserProfile {
   final String id;
   final String displayName;
   final String? email;
+  final String? phoneNumber;
   final String? photoUrl;
   final AuthProviderType provider;
 
@@ -23,6 +25,7 @@ class UserProfile {
     required this.id,
     required this.displayName,
     this.email,
+    this.phoneNumber,
     this.photoUrl,
     required this.provider,
   });

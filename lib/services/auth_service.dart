@@ -5,6 +5,19 @@ abstract class AuthService {
   Future<UserProfile?> signInWithFacebook();
   Future<UserProfile?> signInWithApple();
   Future<UserProfile?> signInWithTwitter();
+
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(AuthException error) onError,
+    required void Function(UserProfile profile) onAutoVerified,
+  });
+
+  Future<UserProfile?> signInWithPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+  });
+
   Future<void> signOut();
 }
 

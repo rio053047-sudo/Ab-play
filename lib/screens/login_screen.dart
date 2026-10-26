@@ -9,6 +9,7 @@ import '../theme/app_typography.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/social_button.dart';
 import 'help_and_legal.dart';
+import 'phone_login_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -141,7 +142,7 @@ class LoginScreen extends StatelessWidget {
                           },
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
                         SocialButton(
                           label: 'Sign in with Facebook',
@@ -153,7 +154,41 @@ class LoginScreen extends StatelessWidget {
                           },
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
+
+                        // Prominent Continue with Phone Number Button
+                        OutlinedButton(
+                          onPressed: () {
+                            authViewModel.resetPhoneAuth();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PhoneLoginScreen(),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.primaryText,
+                            side: const BorderSide(color: AppColors.buttonBorder, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 14.0),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28.0),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.phone_iphone_rounded, color: AppColors.primary, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                'Continue with Phone Number',
+                                style: AppTypography.buttonLabel,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
 
                         // Secondary Social Icons Row
                         Row(

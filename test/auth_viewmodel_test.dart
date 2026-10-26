@@ -45,6 +45,34 @@ class MockAuthService implements AuthService {
   }
 
   @override
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(AuthException error) onError,
+    required void Function(UserProfile profile) onAutoVerified,
+  }) async {
+    if (shouldFail) {
+      onError(AuthException('Invalid Phone Number', code: 'INVALID_PHONE'));
+    } else {
+      onCodeSent('mock_verification_id_123', 123456);
+    }
+  }
+
+  @override
+  Future<UserProfile?> signInWithPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    if (shouldFail) throw AuthException('Invalid OTP Code', code: 'INVALID_OTP');
+    return UserProfile(
+      id: 'phone_999',
+      displayName: 'Phone User',
+      phoneNumber: '+919876543210',
+      provider: AuthProviderType.phone,
+    );
+  }
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -91,6 +119,28 @@ void main() {
       expect(success, false);
       expect(viewModel.status, AuthStatus.error);
       expect(viewModel.errorMessage, 'Google Auth Error');
+    });
+
+    test('Phone OTP sending and verification success flow', () async {
+      final otpSent = await viewModel.sendPhoneOtp('+919876543210');
+      expect(otpSent, true);
+      expect(viewModel.isOtpSent, true);
+      expect(viewModel.phoneVerificationId, 'mock_verification_id_123');
+
+      final verified = await viewModel.verifyOtpCode('123456');
+      expect(verified, true);
+      expect(viewModel.status, AuthStatus.authenticated);
+      expect(viewModel.user?.phoneNumber, '+919876543210');
+    });
+
+    test('Phone OTP verification failure flow', () async {
+      await viewModel.sendPhoneOtp('+919876543210');
+      mockAuthService.shouldFail = true;
+
+      final verified = await viewModel.verifyOtpCode('000000');
+      expect(verified, false);
+      expect(viewModel.status, AuthStatus.error);
+      expect(viewModel.errorMessage, 'Invalid OTP Code');
     });
 
     test('Logout resets state', () async {

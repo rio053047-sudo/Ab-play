@@ -1,0 +1,50 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+.metadata
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+/build/
+**/build/
+
+# Symbol Files
+*.dbg
+*.dSYM
+
+# Android
+android/.gradle/
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# Gradle
+.gradle
+**/android/.gradle
+
+# iOS / Xcode
+**/ios/Pods
+**/ios/DerivedData
+*.xcworkspace
+*.xcodeproj

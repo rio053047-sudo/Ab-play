@@ -26,6 +26,12 @@ class AppTypography {
 
   static const TextStyle labelMedium = captionStyle;
 
+  static const TextStyle labelLarge = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: AppColors.primaryText,
+  );
+
   static const TextStyle titleBold = TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.w800,

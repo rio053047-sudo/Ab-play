@@ -8,18 +8,26 @@ import 'package:ab_play/theme/app_typography.dart';
 import 'package:ab_play/viewmodels/ludo_viewmodel.dart';
 import 'package:ab_play/widgets/ludo/ludo_board_widget.dart';
 
-class LudoBoardScreen extends StatelessWidget {
+class LudoBoardScreen extends StatefulWidget {
   final String roomCode;
 
   const LudoBoardScreen({super.key, this.roomCode = '8421'});
+
+  @override
+  State<LudoBoardScreen> createState() => _LudoBoardScreenState();
+}
+
+class _LudoBoardScreenState extends State<LudoBoardScreen> {
+  bool _isVictoryDialogShown = false;
 
   @override
   Widget build(BuildContext context) {
     final viewModel = Provider.of<LudoViewModel>(context);
     final engine = viewModel.engine;
 
-    // Trigger victory dialog when game finishes
-    if (engine.state == LudoGameState.finished && engine.winner != null) {
+    // Trigger victory dialog only once when game finishes
+    if (engine.state == LudoGameState.finished && engine.winner != null && !_isVictoryDialogShown) {
+      _isVictoryDialogShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showVictoryDialog(context, viewModel);
       });
@@ -44,7 +52,7 @@ class LudoBoardScreen extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
               ),
               child: Text(
-                'LUDO #$roomCode',
+                'LUDO #${widget.roomCode}',
                 style: AppTypography.labelLarge.copyWith(
                   color: const Color(0xFFFFD700),
                   letterSpacing: 1.1,

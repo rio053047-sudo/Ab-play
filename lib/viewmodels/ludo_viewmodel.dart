@@ -19,6 +19,7 @@ class LudoViewModel extends ChangeNotifier {
   Timer? _turnTimer;
   bool _isProcessingAction = false;
   int _turnSequenceId = 0;
+  bool _isDisposed = false;
 
   int get remainingSeconds => _remainingSeconds;
   double get timerProgress => (_remainingSeconds / turnDurationSeconds).clamp(0.0, 1.0);
@@ -45,28 +46,34 @@ class LudoViewModel extends ChangeNotifier {
     );
     _isProcessingAction = false;
     _turnSequenceId = 0;
-    notifyListeners();
+    _safeNotifyListeners();
 
     _startTurnTimer();
     _checkBotTurn();
   }
 
+  void _safeNotifyListeners() {
+    if (!_isDisposed && hasListeners) {
+      notifyListeners();
+    }
+  }
+
   void _startTurnTimer() {
     _cancelTimer();
-    if (engine.state == LudoGameState.finished) return;
+    if (_isDisposed || engine.state == LudoGameState.finished) return;
 
     _remainingSeconds = turnDurationSeconds;
     final currentSeq = ++_turnSequenceId;
 
     _turnTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (currentSeq != _turnSequenceId || engine.state == LudoGameState.finished) {
+      if (_isDisposed || currentSeq != _turnSequenceId || engine.state == LudoGameState.finished) {
         timer.cancel();
         return;
       }
 
       if (_remainingSeconds > 0) {
         _remainingSeconds--;
-        notifyListeners();
+        _safeNotifyListeners();
       }
 
       if (_remainingSeconds <= 0) {
@@ -83,17 +90,18 @@ class LudoViewModel extends ChangeNotifier {
 
   /// Sync timer with server timestamp / network state (monotonic duration)
   void syncTurnTimer({required int secondsRemaining}) {
+    if (_isDisposed) return;
     _remainingSeconds = secondsRemaining.clamp(0, turnDurationSeconds);
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   Future<void> _handleTurnTimeout(int sequenceId) async {
-    if (sequenceId != _turnSequenceId || _isProcessingAction || engine.state == LudoGameState.finished) {
+    if (_isDisposed || sequenceId != _turnSequenceId || _isProcessingAction || engine.state == LudoGameState.finished) {
       return;
     }
 
     _isProcessingAction = true;
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
       if (engine.state == LudoGameState.rolling) {
@@ -101,26 +109,30 @@ class LudoViewModel extends ChangeNotifier {
         await _performRollLogic();
       }
 
-      if (engine.state == LudoGameState.selectingToken && engine.currentDiceValue != null) {
+      if (!_isDisposed && engine.state == LudoGameState.selectingToken && engine.currentDiceValue != null) {
         // Auto-move selection using smart decision engine
         final bestToken = engine.selectBestAutoMove(engine.currentDiceValue!);
         if (bestToken != null) {
           await Future.delayed(const Duration(milliseconds: 300));
-          _performTokenMove(bestToken);
+          if (!_isDisposed && sequenceId == _turnSequenceId) {
+            _performTokenMove(bestToken);
+          }
         } else {
           // No move available, pass turn
           await Future.delayed(const Duration(milliseconds: 400));
-          _passTurn();
+          if (!_isDisposed && sequenceId == _turnSequenceId) {
+            _passTurn();
+          }
         }
       }
     } finally {
       _isProcessingAction = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   Future<void> rollDice() async {
-    if (engine.state != LudoGameState.rolling || isRollingDice || _isProcessingAction) return;
+    if (_isDisposed || engine.state != LudoGameState.rolling || isRollingDice || _isProcessingAction) return;
 
     _isProcessingAction = true;
     await _performRollLogic();
@@ -128,11 +140,13 @@ class LudoViewModel extends ChangeNotifier {
   }
 
   Future<void> _performRollLogic() async {
+    final captureSeq = _turnSequenceId;
     isRollingDice = true;
-    notifyListeners();
+    _safeNotifyListeners();
 
     // Dice roll animation duration
     await Future.delayed(const Duration(milliseconds: 350));
+    if (_isDisposed || captureSeq != _turnSequenceId) return;
 
     int diceValue = _random.nextInt(6) + 1;
     engine.currentDiceValue = diceValue;
@@ -154,40 +168,46 @@ class LudoViewModel extends ChangeNotifier {
     if (movableTokens.isEmpty) {
       // No valid moves, display and pass turn
       engine.state = LudoGameState.selectingToken;
-      notifyListeners();
+      _safeNotifyListeners();
       await Future.delayed(const Duration(milliseconds: 800));
-      _passTurn();
+      if (!_isDisposed && captureSeq == _turnSequenceId) {
+        _passTurn();
+      }
     } else if (movableTokens.length == 1 && !engine.currentPlayer.isBot) {
       // Auto move single movable token for smooth human UX
       engine.state = LudoGameState.selectingToken;
-      notifyListeners();
+      _safeNotifyListeners();
       await Future.delayed(const Duration(milliseconds: 350));
-      _performTokenMove(movableTokens.first);
+      if (!_isDisposed && captureSeq == _turnSequenceId) {
+        _performTokenMove(movableTokens.first);
+      }
     } else {
       engine.state = LudoGameState.selectingToken;
-      notifyListeners();
+      _safeNotifyListeners();
 
       if (engine.currentPlayer.isBot) {
         await Future.delayed(const Duration(milliseconds: 600));
-        final botChoice = engine.selectBestAutoMove(diceValue);
-        if (botChoice != null) {
-          _performTokenMove(botChoice);
-        } else {
-          _passTurn();
+        if (!_isDisposed && captureSeq == _turnSequenceId) {
+          final botChoice = engine.selectBestAutoMove(diceValue);
+          if (botChoice != null) {
+            _performTokenMove(botChoice);
+          } else {
+            _passTurn();
+          }
         }
       }
     }
   }
 
   void selectToken(LudoToken token) {
-    if (engine.state != LudoGameState.selectingToken || _isProcessingAction) return;
+    if (_isDisposed || engine.state != LudoGameState.selectingToken || _isProcessingAction) return;
     if (engine.currentDiceValue == null) return;
 
     _performTokenMove(token);
   }
 
   void _performTokenMove(LudoToken token) {
-    if (engine.currentDiceValue == null) return;
+    if (_isDisposed || engine.currentDiceValue == null) return;
     int dice = engine.currentDiceValue!;
 
     bool moved = engine.moveToken(token, dice);
@@ -198,23 +218,32 @@ class LudoViewModel extends ChangeNotifier {
         _startTurnTimer();
         _checkBotTurn();
       }
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   void _passTurn() {
+    if (_isDisposed) return;
     engine.nextTurn();
     _startTurnTimer();
-    notifyListeners();
+    _safeNotifyListeners();
     _checkBotTurn();
   }
 
   void _checkBotTurn() async {
-    if (engine.state == LudoGameState.finished) return;
+    if (_isDisposed || engine.state == LudoGameState.finished) return;
+
+    final captureSeq = _turnSequenceId;
+    final botPlayerId = engine.currentPlayer.id;
 
     if (engine.currentPlayer.isBot && engine.state == LudoGameState.rolling) {
       await Future.delayed(const Duration(milliseconds: 700));
-      if (engine.currentPlayer.isBot && engine.state == LudoGameState.rolling) {
+      if (!_isDisposed &&
+          captureSeq == _turnSequenceId &&
+          engine.currentPlayer.id == botPlayerId &&
+          engine.currentPlayer.isBot &&
+          engine.state == LudoGameState.rolling &&
+          !_isProcessingAction) {
         rollDice();
       }
     }
@@ -222,6 +251,7 @@ class LudoViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _cancelTimer();
     super.dispose();
   }

@@ -9,6 +9,37 @@ import 'ludo_lobby_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  void _onGameSelected(BuildContext context, GameItem game) {
+    if (game.id == 'ludo') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LudoLobbyScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.amber, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${game.title} game room is launching soon in Phase 4!',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1E1B2E),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeVM = Provider.of<HomeViewModel>(context);
@@ -270,7 +301,14 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Quick Match matchmaking queue launching soon!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.primary,
@@ -395,14 +433,7 @@ class HomeScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final game = recentGames[index];
               return GestureDetector(
-                onTap: () {
-                  if (game.id == 'ludo') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LudoLobbyScreen()),
-                    );
-                  }
-                },
+                onTap: () => _onGameSelected(context, game),
                 child: Column(
                   children: [
                     Container(
@@ -491,86 +522,89 @@ class HomeScreen extends StatelessWidget {
         ? const LinearGradient(colors: [Color(0xFF1976D2), Color(0xFF42A5F5)])
         : const LinearGradient(colors: [Color(0xFFF57C00), Color(0xFFFFB74D)]);
 
-    return Container(
-      width: double.infinity,
-      height: 110,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: gradient,
-        boxShadow: [
-          BoxShadow(
-            color: (isBlue ? const Color(0xFF1976D2) : const Color(0xFFF57C00)).withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        game.tag,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () => _onGameSelected(context, game),
+      child: Container(
+        width: double.infinity,
+        height: 110,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: gradient,
+          boxShadow: [
+            BoxShadow(
+              color: (isBlue ? const Color(0xFF1976D2) : const Color(0xFFF57C00)).withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          game.tag,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      game.playerCount,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(width: 8),
+                      Text(
+                        game.playerCount,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    game.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  game.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  game.subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 11,
+                  const SizedBox(height: 2),
+                  Text(
+                    game.subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: _getGameIconLarge(game.id),
             ),
-            child: _getGameIconLarge(game.id),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -595,14 +629,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildGameCard(BuildContext context, GameItem game) {
     return GestureDetector(
-      onTap: () {
-        if (game.id == 'ludo') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const LudoLobbyScreen()),
-          );
-        }
-      },
+      onTap: () => _onGameSelected(context, game),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,

@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:ab_play/screens/main_navigation_shell.dart';
 import 'package:ab_play/viewmodels/auth_viewmodel.dart';
+import 'package:ab_play/viewmodels/chat_viewmodel.dart';
 import 'package:ab_play/viewmodels/home_viewmodel.dart';
+import 'package:ab_play/viewmodels/voice_room_viewmodel.dart';
 import 'package:ab_play/services/real_auth_service.dart';
 
 void main() {
@@ -15,6 +17,12 @@ void main() {
         ),
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => VoiceRoomViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatViewModel(),
         ),
       ],
       child: const MaterialApp(
@@ -53,7 +61,7 @@ void main() {
     await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Messages & Groups'), findsOneWidget);
+    expect(find.text('Chats & Friends'), findsOneWidget);
 
     // Switch back to Ab-Play Home
     await tester.tap(find.text('Ab-Play'));

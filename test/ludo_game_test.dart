@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ab_play/models/ludo/ludo_color.dart';
-import 'package:ab_play/models/ludo/ludo_token.dart';
-import 'package:ab_play/models/ludo/ludo_player.dart';
 import 'package:ab_play/models/ludo/ludo_engine.dart';
 import 'package:ab_play/viewmodels/ludo_viewmodel.dart';
 
@@ -40,24 +38,14 @@ void main() {
 
     test('Token capture sends enemy token back to yard', () {
       final redPlayer = vm.engine.players[0]; // Red start index = 0
-      final greenPlayer = vm.engine.players[1]; // Green start index = 13
+      final greenPlayer = vm.engine.players[1]; // Green start index = 39
 
-      // Move Red token to index 14 (Red step 15)
+      // Move Red token to index 14
       final redToken = redPlayer.tokens[0];
-      redToken.step = 15; // globalTrackIndex = (0 + 15 - 1) % 52 = 14
-
-      // Green token on index 14 (Green step 2, since start is 13: (13 + 2 - 1) = 14)
       final greenToken = greenPlayer.tokens[0];
-      greenToken.step = 2; // globalTrackIndex = 14
 
-      expect(redToken.globalTrackIndex, 14);
-      expect(greenToken.globalTrackIndex, 14);
-
-      // Red moves 1 step to index 15
-      // Instead, set Red token step = 1, and move to step 15 where Green token is
       redToken.step = 1; // index 0 (safe spot)
-      // Place Green token at step 2 (index 14, non-safe)
-      greenToken.step = 2; // index 14
+      greenToken.step = 28; // Green start 39 + 28 - 1 = 66 -> % 52 = 14 (non-safe spot)
 
       vm.engine.currentTurnIndex = 0; // Red's turn
       vm.engine.moveToken(redToken, 14); // step becomes 15 -> index 14

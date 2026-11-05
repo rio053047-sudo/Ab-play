@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../viewmodels/home_viewmodel.dart';
 import 'home_screen.dart';
+import 'voice_room/voice_room_screen.dart';
+import 'chat/chats_screen.dart';
 import 'tab_placeholders.dart';
 
 class MainNavigationShell extends StatelessWidget {
@@ -17,8 +19,8 @@ class MainNavigationShell extends StatelessWidget {
             index: homeVM.selectedTabIndex,
             children: const [
               HomeScreen(),
-              VoiceRoomScreen(),
-              ChatsScreen(),
+              VoiceRoomLobbyScreen(),
+              ChatsTabScreen(),
               DiscoverScreen(),
               ProfileScreen(),
             ],

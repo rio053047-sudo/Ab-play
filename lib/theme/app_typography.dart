@@ -10,10 +10,26 @@ class AppTypography {
     color: AppColors.primaryText,
   );
 
+  static const TextStyle titleMedium = titleStyle;
+
+  static const TextStyle titleSmall = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.bold,
+    color: AppColors.primaryText,
+  );
+
   static const TextStyle captionStyle = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.normal,
     color: AppColors.secondaryText,
+  );
+
+  static const TextStyle labelMedium = captionStyle;
+
+  static const TextStyle labelLarge = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: AppColors.primaryText,
   );
 
   static const TextStyle titleBold = TextStyle(

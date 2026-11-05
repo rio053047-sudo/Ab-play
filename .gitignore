@@ -9,6 +9,7 @@
 .history
 .svn/
 migrate_working_dir/
+.metadata
 
 # IntelliJ related
 *.iml
@@ -24,15 +25,16 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
 build/
+/build/
+**/build/
 
 # Symbol Files
 *.dbg
 *.dSYM
 
 # Android
-android/
+android/.gradle/
 **/android/app/debug
 **/android/app/profile
 **/android/app/release
@@ -42,7 +44,6 @@ android/
 **/android/.gradle
 
 # iOS / Xcode
-ios/
 **/ios/Pods
 **/ios/DerivedData
 *.xcworkspace

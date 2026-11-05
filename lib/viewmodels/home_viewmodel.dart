@@ -151,4 +151,11 @@ class HomeViewModel extends ChangeNotifier {
     _coinBalance += amount;
     notifyListeners();
   }
+
+  void deductCoins(int amount) {
+    if (_coinBalance >= amount) {
+      _coinBalance -= amount;
+      notifyListeners();
+    }
+  }
 }

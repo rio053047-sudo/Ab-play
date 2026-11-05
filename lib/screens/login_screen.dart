@@ -11,8 +11,44 @@ import '../widgets/social_button.dart';
 import 'help_and_legal.dart';
 import 'phone_login_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        LegalDocumentScreen.openUrlOrShowModal(
+          context,
+          'Terms of Service',
+          'https://abplay.app/terms',
+        );
+      };
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        LegalDocumentScreen.openUrlOrShowModal(
+          context,
+          'Privacy Policy',
+          'https://abplay.app/privacy',
+        );
+      };
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
 
   void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -230,27 +266,13 @@ class LoginScreen extends StatelessWidget {
                                 TextSpan(
                                   text: 'Terms of Service',
                                   style: AppTypography.legalLinkText,
-                                  recognizer: TapGestureRecognizer()
-                                    ..onTap = () {
-                                      LegalDocumentScreen.openUrlOrShowModal(
-                                        context,
-                                        'Terms of Service',
-                                        'https://abplay.app/terms',
-                                      );
-                                    },
+                                  recognizer: _termsRecognizer,
                                 ),
                                 const TextSpan(text: ' and '),
                                 TextSpan(
                                   text: 'Privacy Policy',
                                   style: AppTypography.legalLinkText,
-                                  recognizer: TapGestureRecognizer()
-                                    ..onTap = () {
-                                      LegalDocumentScreen.openUrlOrShowModal(
-                                        context,
-                                        'Privacy Policy',
-                                        'https://abplay.app/privacy',
-                                      );
-                                    },
+                                  recognizer: _privacyRecognizer,
                                 ),
                               ],
                             ),

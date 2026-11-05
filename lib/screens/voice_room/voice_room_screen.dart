@@ -4,6 +4,7 @@ import '../../models/voice_room.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/voice_room_viewmodel.dart';
+import '../../services/room_bgm_service.dart';
 
 class VoiceRoomLobbyScreen extends StatelessWidget {
   const VoiceRoomLobbyScreen({super.key});

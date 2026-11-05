@@ -6,7 +6,9 @@ import 'screens/main_navigation_shell.dart';
 import 'services/real_auth_service.dart';
 import 'theme/app_theme.dart';
 import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/chat_viewmodel.dart';
 import 'viewmodels/home_viewmodel.dart';
+import 'viewmodels/voice_room_viewmodel.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +27,12 @@ class AbPlayApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => VoiceRoomViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatViewModel(),
         ),
       ],
       child: MaterialApp(

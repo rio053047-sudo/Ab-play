@@ -15,7 +15,7 @@ class PremiumLudoBoardPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     double cellSize = size.width / 15;
 
-  // 1. Draw Board Outer Wooden / Metallic Frame
+    // 1. Draw Board Outer Wooden / Metallic Frame
     _drawPremiumFrame(canvas, size);
 
     // 2. Draw Ivory Track Grid Background

@@ -39,7 +39,7 @@ class FriendshipScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Play Ludo, voice chat, and send gifts to level up your Friendship Badges and exclusive CP frames!',
+                        'Play Ludo, voice chat, and complete daily partner missions to unlock rare CP badges and frames!',
                         style: TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                     ],
@@ -60,7 +60,7 @@ class FriendshipScreen extends StatelessWidget {
 
   Widget _buildRelationCard(BuildContext context, FriendshipRelation rel, FriendshipViewModel vm) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1B2E),
@@ -68,6 +68,7 @@ class FriendshipScreen extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -115,6 +116,42 @@ class FriendshipScreen extends StatelessWidget {
               Text('Daily Cap: ${rel.dailyXpEarned}/${FriendshipRelation.maxDailyXp}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ],
           ),
+          const SizedBox(height: 14),
+
+          // Partner Daily Missions
+          const Text(
+            'Daily Partner Missions',
+            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...rel.dailyMissions.map((mission) => Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF221F38),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(mission.title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text('${mission.current}/${mission.target} • +${mission.rewardXp} XP', style: const TextStyle(color: Colors.amber, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                Icon(
+                  mission.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: mission.isCompleted ? Colors.greenAccent : Colors.white38,
+                  size: 18,
+                ),
+              ],
+            ),
+          )),
+
           const SizedBox(height: 12),
           Row(
             children: [
@@ -126,7 +163,7 @@ class FriendshipScreen extends StatelessWidget {
                     final ok = vm.addFriendshipActivity(friendId: rel.friendId, activityType: 'game', basePoints: 50);
                     if (ok) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('+50 Friendship XP earned with ${rel.friendName}!')),
+                        SnackBar(content: Text('+50 Friendship XP & Mission Progress with ${rel.friendName}!')),
                       );
                     }
                   },
@@ -141,7 +178,7 @@ class FriendshipScreen extends StatelessWidget {
                     final ok = vm.addFriendshipActivity(friendId: rel.friendId, activityType: 'voice', basePoints: 30);
                     if (ok) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('+30 Friendship XP earned with ${rel.friendName}!')),
+                        SnackBar(content: Text('+30 Friendship XP & Voice Progress with ${rel.friendName}!')),
                       );
                     }
                   },

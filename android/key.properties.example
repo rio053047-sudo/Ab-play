@@ -1,0 +1,8 @@
+# Example Android Release Signing Properties
+# Copy this file to `android/key.properties` and replace with your actual production keystore details.
+# DO NOT commit the actual `key.properties` or keystore (`.jks` / `.keystore`) to Git.
+
+keyAlias=your_release_key_alias
+keyPassword=your_release_key_password
+storeFile=../your_release_keystore.jks
+storePassword=your_keystore_password

@@ -1,28 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
+import '../services/localization_service.dart';
 import '../viewmodels/home_viewmodel.dart';
 import 'home_screen.dart';
 import 'voice_room/voice_room_screen.dart';
 import 'chat/chats_screen.dart';
-import 'tab_placeholders.dart';
+import 'discover/discover_tab_screen.dart';
+import 'profile/profile_tab_screen.dart';
+import 'store/customization_store_screen.dart';
+import 'family/family_screen.dart';
+import 'friendship/friendship_screen.dart';
+import 'events/events_screen.dart';
+import 'achievements/achievements_screen.dart';
+import 'admin/admin_panel_screen.dart';
 
 class MainNavigationShell extends StatelessWidget {
   const MainNavigationShell({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final loc = LocalizationService.instance;
+
     return Consumer<HomeViewModel>(
       builder: (context, homeVM, child) {
         return Scaffold(
           body: IndexedStack(
             index: homeVM.selectedTabIndex,
-            children: const [
-              HomeScreen(),
-              VoiceRoomLobbyScreen(),
-              ChatsTabScreen(),
-              DiscoverScreen(),
-              ProfileScreen(),
+            children: [
+              const HomeScreen(),
+              const VoiceRoomLobbyScreen(),
+              const ChatsTabScreen(),
+              const DiscoverTabScreen(),
+              ProfileTabScreen(
+                onOpenStore: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomizationStoreScreen())),
+                onOpenFamily: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
+                onOpenFriendship: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendshipScreen())),
+                onOpenEvents: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EventsScreen())),
+                onOpenAchievements: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsScreen())),
+                onOpenAdmin: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPanelScreen())),
+              ),
             ],
           ),
           bottomNavigationBar: Container(
@@ -46,31 +63,31 @@ class MainNavigationShell extends StatelessWidget {
               selectedFontSize: 11,
               unselectedFontSize: 11,
               elevation: 0,
-              items: const [
+              items: [
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.videogame_asset_outlined),
-                  activeIcon: Icon(Icons.videogame_asset_rounded),
-                  label: 'Ab-Play',
+                  icon: const Icon(Icons.videogame_asset_outlined),
+                  activeIcon: const Icon(Icons.videogame_asset_rounded),
+                  label: loc.tr('tab_home'),
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.mic_none_rounded),
-                  activeIcon: Icon(Icons.mic_rounded),
-                  label: 'Voice Room',
+                  icon: const Icon(Icons.mic_none_rounded),
+                  activeIcon: const Icon(Icons.mic_rounded),
+                  label: loc.tr('tab_voice'),
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.chat_bubble_outline_rounded),
-                  activeIcon: Icon(Icons.chat_bubble_rounded),
-                  label: 'Chats',
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  activeIcon: const Icon(Icons.chat_bubble_rounded),
+                  label: loc.tr('tab_chats'),
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.explore_outlined),
-                  activeIcon: Icon(Icons.explore_rounded),
-                  label: 'Discover',
+                  icon: const Icon(Icons.explore_outlined),
+                  activeIcon: const Icon(Icons.explore_rounded),
+                  label: loc.tr('tab_discover'),
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline_rounded),
-                  activeIcon: Icon(Icons.person_rounded),
-                  label: 'Me',
+                  icon: const Icon(Icons.person_outline_rounded),
+                  activeIcon: const Icon(Icons.person_rounded),
+                  label: loc.tr('tab_me'),
                 ),
               ],
             ),

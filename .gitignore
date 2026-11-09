@@ -33,11 +33,16 @@ build/
 *.dbg
 *.dSYM
 
-# Android
+# Android & Keystores
 android/.gradle/
 **/android/app/debug
 **/android/app/profile
 **/android/app/release
+*.jks
+*.keystore
+android/key.properties
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
 
 # Gradle
 .gradle

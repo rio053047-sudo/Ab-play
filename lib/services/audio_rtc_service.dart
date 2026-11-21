@@ -1,5 +1,8 @@
 import 'dart:async';
+
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 abstract class AudioRtcService {
   ValueListenable<bool> get isMicrophoneMuted;
@@ -18,12 +21,6 @@ abstract class AudioRtcService {
   Future<void> toggleSpeaker(bool mute);
   void dispose();
 }
-
-import 'dart:async';
-
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:flutter/foundation.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 /// Agora RTC implementation.
 ///

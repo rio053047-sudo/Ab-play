@@ -36,7 +36,10 @@ class RealAudioRtcService implements AudioRtcService {
     String? appId,
     String? token,
   })  : _appId = appId ??
-            const String.fromEnvironment('AGORA_APP_ID'),
+            const String.fromEnvironment(
+              'AGORA_APP_ID',
+              defaultValue: '09a63b833352446c89b5aa2cc5e11f28',
+            ),
         _token = token ??
             const String.fromEnvironment('AGORA_TEMP_TOKEN');
 

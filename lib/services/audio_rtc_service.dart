@@ -1,10 +1,29 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+
+abstract class AudioRtcService {
+  ValueListenable<bool> get isMicrophoneMuted;
+  ValueListenable<bool> get isAudioOutputMuted;
+  ValueListenable<double> get localAudioLevel;
+  Stream<Map<String, double>> get remoteAudioLevels;
+
+  Future<void> joinChannel({
+    required String roomId,
+    required String userId,
+    required bool isSpeaker,
+  });
+
+  Future<void> leaveChannel();
+  Future<void> toggleMicrophone(bool mute);
+  Future<void> toggleSpeaker(bool mute);
+  void dispose();
+}
+
+import 'dart:async';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-import 'audio_rtc_service.dart';
 
 /// Agora RTC implementation.
 ///

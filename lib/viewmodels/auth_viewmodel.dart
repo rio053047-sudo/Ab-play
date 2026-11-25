@@ -7,7 +7,8 @@ import '../services/auth_service.dart';
 class AuthViewModel extends ChangeNotifier {
   final AuthService _authService;
 
-  AuthViewModel({required AuthService authService}) : _authService = authService;
+  AuthViewModel({required AuthService authService})
+      : _authService = authService;
 
   AuthStatus _status = AuthStatus.unauthenticated;
   UserProfile? _user;
@@ -15,6 +16,8 @@ class AuthViewModel extends ChangeNotifier {
   AuthProviderType? _activeProvider;
   String? _pendingEmailLink;
   bool _emailLinkSent = false;
+  bool _emailVerificationSent = false;
+  String? _accountNotice;
   StreamSubscription<UserProfile?>? _authSubscription;
   StreamSubscription<String>? _emailLinkSubscription;
   bool _didInitialize = false;
@@ -31,10 +34,17 @@ class AuthViewModel extends ChangeNotifier {
   AuthProviderType? get activeProvider => _activeProvider;
 
   bool get isAuthenticated => _status == AuthStatus.authenticated;
-  bool get isLoggedIn => _status == AuthStatus.authenticated;
+  bool get requiresEmailVerification =>
+      _status == AuthStatus.authenticated &&
+      _user?.provider == AuthProviderType.emailPassword &&
+      !(_user?.emailVerified ?? true);
+  bool get isLoggedIn =>
+      _status == AuthStatus.authenticated && !requiresEmailVerification;
   bool get isAuthenticating => _status == AuthStatus.authenticating;
   bool get isInitializing => _status == AuthStatus.initializing;
   bool get emailLinkSent => _emailLinkSent;
+  bool get emailVerificationSent => _emailVerificationSent;
+  String? get accountNotice => _accountNotice;
   bool get hasPendingEmailLink => _pendingEmailLink != null;
 
   String? get phoneVerificationId => _phoneVerificationId;
@@ -58,7 +68,8 @@ class AuthViewModel extends ChangeNotifier {
       _authSubscription = _authService.authStateChanges.listen(
         _applyAuthState,
         onError: (Object error) {
-          _errorMessage = 'Could not restore your sign-in session. Please sign in again.';
+          _errorMessage =
+              'Could not restore your sign-in session. Please sign in again.';
           _status = AuthStatus.unauthenticated;
           notifyListeners();
         },
@@ -74,7 +85,8 @@ class AuthViewModel extends ChangeNotifier {
 
   void _applyAuthState(UserProfile? profile) {
     _user = profile;
-    _status = profile == null ? AuthStatus.unauthenticated : AuthStatus.authenticated;
+    _status =
+        profile == null ? AuthStatus.unauthenticated : AuthStatus.authenticated;
     if (profile == null) _activeProvider = null;
     _errorMessage = null;
     notifyListeners();
@@ -148,7 +160,8 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<bool> loginWithGoogle() async {
-    return _handleAuth(() => _authService.signInWithGoogle(), AuthProviderType.google);
+    return _handleAuth(
+        () => _authService.signInWithGoogle(), AuthProviderType.google);
   }
 
   Future<bool> sendEmailSignInLink(String email) async {
@@ -167,7 +180,8 @@ class AuthViewModel extends ChangeNotifier {
     } on AuthException catch (error) {
       _setAuthError(error.message);
     } catch (error) {
-      _setAuthError('Could not send the sign-in link. Please try again. $error');
+      _setAuthError(
+          'Could not send the sign-in link. Please try again. $error');
     }
     return false;
   }
@@ -175,7 +189,8 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> completePendingEmailLink(String email) async {
     final link = _pendingEmailLink;
     if (link == null) {
-      _setAuthError('Open the Ab-Play sign-in link from your email, then try again.');
+      _setAuthError(
+          'Open the Ab-Play sign-in link from your email, then try again.');
       return false;
     }
     final success = await _handleAuth(
@@ -187,29 +202,131 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<bool> loginWithEmailPassword(String email, String password) {
+    _accountNotice = null;
+    _emailVerificationSent = false;
     return _handleAuth(
-      () => _authService.signInWithEmailPassword(email: email, password: password),
+      () => _authService.signInWithEmailPassword(
+          email: email, password: password),
       AuthProviderType.emailPassword,
     );
   }
 
-  Future<bool> createEmailPasswordAccount(String email, String password) {
-    return _handleAuth(
-      () => _authService.createEmailPasswordAccount(email: email, password: password),
+  Future<bool> createEmailPasswordAccount(String email, String password) async {
+    _accountNotice = null;
+    _emailVerificationSent = false;
+    final success = await _handleAuth(
+      () => _authService.createEmailPasswordAccount(
+          email: email, password: password),
       AuthProviderType.emailPassword,
     );
+    if (success && requiresEmailVerification) {
+      _emailVerificationSent = true;
+      _accountNotice =
+          'Verification email sent. Open its link before continuing.';
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<bool> sendEmailPasswordReset(String email) async {
+    _status = AuthStatus.authenticating;
+    _activeProvider = AuthProviderType.emailPassword;
+    _errorMessage = null;
+    _accountNotice = null;
+    notifyListeners();
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      _status =
+          _user == null ? AuthStatus.unauthenticated : AuthStatus.authenticated;
+      _activeProvider = null;
+      _accountNotice =
+          'If an account exists for this address, a password reset email is on its way.';
+      notifyListeners();
+      return true;
+    } on AuthException catch (error) {
+      if (error.code == 'user-not-found' || error.code == 'email-not-found') {
+        _status = _user == null
+            ? AuthStatus.unauthenticated
+            : AuthStatus.authenticated;
+        _activeProvider = null;
+        _accountNotice =
+            'If an account exists for this address, a password reset email is on its way.';
+        notifyListeners();
+        return true;
+      }
+      _setAuthError(error.message);
+    } catch (_) {
+      _setAuthError('Could not send a password reset email. Please try again.');
+    }
+    return false;
+  }
+
+  Future<bool> resendEmailVerification() async {
+    _status = AuthStatus.authenticating;
+    _activeProvider = AuthProviderType.emailPassword;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.sendEmailVerification();
+      _status = AuthStatus.authenticated;
+      _activeProvider = null;
+      _emailVerificationSent = true;
+      _accountNotice =
+          'Verification email sent. Check your inbox and spam folder.';
+      notifyListeners();
+      return true;
+    } on AuthException catch (error) {
+      _setAuthError(error.message);
+    } catch (_) {
+      _setAuthError('Could not send a verification email. Please try again.');
+    }
+    return false;
+  }
+
+  Future<bool> refreshEmailVerification() async {
+    _status = AuthStatus.authenticating;
+    _activeProvider = AuthProviderType.emailPassword;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final profile = await _authService.reloadEmailPasswordUser();
+      if (profile == null) {
+        _setAuthError('Your sign-in session expired. Sign in again.');
+        return false;
+      }
+      _user = profile;
+      _status = AuthStatus.authenticated;
+      _activeProvider = null;
+      if (profile.emailVerified) {
+        _accountNotice = 'Email verified. You are signed in.';
+        _emailVerificationSent = false;
+      } else {
+        _accountNotice =
+            'Email is not verified yet. Open the verification link, then try again.';
+      }
+      notifyListeners();
+      return profile.emailVerified;
+    } on AuthException catch (error) {
+      _setAuthError(error.message);
+    } catch (_) {
+      _setAuthError('Could not check email verification. Please try again.');
+    }
+    return false;
   }
 
   Future<bool> loginWithFacebook() async {
-    return _handleAuth(() => _authService.signInWithFacebook(), AuthProviderType.facebook);
+    return _handleAuth(
+        () => _authService.signInWithFacebook(), AuthProviderType.facebook);
   }
 
   Future<bool> loginWithApple() async {
-    return _handleAuth(() => _authService.signInWithApple(), AuthProviderType.apple);
+    return _handleAuth(
+        () => _authService.signInWithApple(), AuthProviderType.apple);
   }
 
   Future<bool> loginWithTwitter() async {
-    return _handleAuth(() => _authService.signInWithTwitter(), AuthProviderType.twitter);
+    return _handleAuth(
+        () => _authService.signInWithTwitter(), AuthProviderType.twitter);
   }
 
   Future<void> logout() async {
@@ -243,6 +360,11 @@ class AuthViewModel extends ChangeNotifier {
       if (profile != null) {
         _user = profile;
         _status = AuthStatus.authenticated;
+        if (provider == AuthProviderType.emailPassword &&
+            !profile.emailVerified) {
+          _accountNotice =
+              'Verify your email address before continuing to Ab-Play.';
+        }
         notifyListeners();
         return true;
       } else {

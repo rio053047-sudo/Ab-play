@@ -8,6 +8,9 @@ class MockAuthService implements AuthService {
   bool shouldCancel = false;
   String? sentEmail;
   UserProfile? restoredUser;
+  bool verified = true;
+  String? resetEmail;
+  int verificationEmailsSent = 0;
 
   @override
   Future<void> initialize() async {}
@@ -68,7 +71,8 @@ class MockAuthService implements AuthService {
   Future<UserProfile?> completeEmailLink({
     required String email,
     required String emailLink,
-  }) async => UserProfile(
+  }) async =>
+      UserProfile(
         id: 'email_link_123',
         displayName: 'Email Link User',
         email: email,
@@ -79,7 +83,8 @@ class MockAuthService implements AuthService {
   Future<UserProfile?> signInWithEmailPassword({
     required String email,
     required String password,
-  }) async => UserProfile(
+  }) async =>
+      UserProfile(
         id: 'email_password_123',
         displayName: 'Password User',
         email: email,
@@ -90,7 +95,33 @@ class MockAuthService implements AuthService {
   Future<UserProfile?> createEmailPasswordAccount({
     required String email,
     required String password,
-  }) async => signInWithEmailPassword(email: email, password: password);
+  }) async =>
+      UserProfile(
+        id: 'new_email_password',
+        displayName: 'New User',
+        email: email,
+        provider: AuthProviderType.emailPassword,
+        emailVerified: false,
+      );
+
+  @override
+  Future<void> sendEmailVerification() async {
+    verificationEmailsSent++;
+  }
+
+  @override
+  Future<UserProfile?> reloadEmailPasswordUser() async => UserProfile(
+        id: 'email_password_123',
+        displayName: 'Password User',
+        email: restoredUser?.email ?? 'user@example.com',
+        provider: AuthProviderType.emailPassword,
+        emailVerified: verified,
+      );
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    resetEmail = email;
+  }
 
   @override
   Future<void> verifyPhoneNumber({
@@ -111,7 +142,9 @@ class MockAuthService implements AuthService {
     required String verificationId,
     required String smsCode,
   }) async {
-    if (shouldFail) throw AuthException('Invalid OTP Code', code: 'INVALID_OTP');
+    if (shouldFail) {
+      throw AuthException('Invalid OTP Code', code: 'INVALID_OTP');
+    }
     return UserProfile(
       id: 'phone_999',
       displayName: 'Phone User',
@@ -182,6 +215,41 @@ void main() {
       expect(signedIn, isTrue);
       expect(viewModel.user?.email, 'player@gmail.com');
       expect(viewModel.user?.provider, AuthProviderType.emailPassword);
+    });
+
+    test('New password accounts require email verification before Home',
+        () async {
+      final created = await viewModel.createEmailPasswordAccount(
+        'new@example.com',
+        'strong-password',
+      );
+
+      expect(created, isTrue);
+      expect(viewModel.requiresEmailVerification, isTrue);
+      expect(viewModel.isLoggedIn, isFalse);
+      expect(viewModel.emailVerificationSent, isTrue);
+      expect(viewModel.accountNotice, contains('Verification email sent'));
+    });
+
+    test('Password reset uses the entered address and confirms generically',
+        () async {
+      final sent = await viewModel.sendEmailPasswordReset('player@example.com');
+
+      expect(sent, isTrue);
+      expect(mockAuthService.resetEmail, 'player@example.com');
+      expect(viewModel.accountNotice, contains('If an account exists'));
+    });
+
+    test('Refreshing verified email enables Home navigation', () async {
+      await viewModel.createEmailPasswordAccount(
+          'new@example.com', 'strong-password');
+      mockAuthService.verified = true;
+
+      final verified = await viewModel.refreshEmailVerification();
+
+      expect(verified, isTrue);
+      expect(viewModel.requiresEmailVerification, isFalse);
+      expect(viewModel.isLoggedIn, isTrue);
     });
 
     test('Canceled Facebook Login resets state to unauthenticated', () async {

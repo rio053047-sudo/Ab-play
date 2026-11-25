@@ -77,7 +77,8 @@ class RealAuthService implements AuthService {
 
   UserProfile? _profile(User? user) {
     if (user == null) return null;
-    final providerIds = user.providerData.map((info) => info.providerId).toSet();
+    final providerIds =
+        user.providerData.map((info) => info.providerId).toSet();
     final provider = user.phoneNumber != null
         ? AuthProviderType.phone
         : providerIds.contains('google.com')
@@ -85,11 +86,13 @@ class RealAuthService implements AuthService {
             : AuthProviderType.emailPassword;
     return UserProfile(
       id: user.uid,
-      displayName: user.displayName ?? user.email ?? user.phoneNumber ?? 'Ab-Play User',
+      displayName:
+          user.displayName ?? user.email ?? user.phoneNumber ?? 'Ab-Play User',
       email: user.email,
       phoneNumber: user.phoneNumber,
       photoUrl: user.photoURL,
       provider: provider,
+      emailVerified: user.emailVerified,
     );
   }
 
@@ -103,6 +106,7 @@ class RealAuthService implements AuthService {
       phoneNumber: profile.phoneNumber,
       photoUrl: profile.photoUrl,
       provider: provider,
+      emailVerified: profile.emailVerified,
     );
   }
 
@@ -110,13 +114,23 @@ class RealAuthService implements AuthService {
     final message = switch (error.code) {
       'invalid-email' => 'Enter a valid email address.',
       'user-disabled' => 'This account has been disabled. Contact support.',
-      'user-not-found' || 'wrong-password' || 'invalid-credential' =>
+      'user-not-found' ||
+      'wrong-password' ||
+      'invalid-credential' =>
         'The email or password is incorrect.',
       'email-already-in-use' => 'An account already exists for this email.',
       'weak-password' => 'Choose a stronger password (at least 6 characters).',
-      'expired-action-code' || 'invalid-action-code' =>
+      'operation-not-allowed' =>
+        'Email/password sign-in is disabled in Firebase Console.',
+      'quota-exceeded' =>
+        'Email sending limit reached. Please try again later.',
+      'requires-recent-login' =>
+        'Sign in again before changing this account setting.',
+      'expired-action-code' ||
+      'invalid-action-code' =>
         'This sign-in link is invalid or has expired. Request a new link.',
-      'network-request-failed' => 'Check your internet connection and try again.',
+      'network-request-failed' =>
+        'Check your internet connection and try again.',
       'too-many-requests' => 'Too many attempts. Wait a little and try again.',
       _ => error.message ?? 'Authentication failed. Please try again.',
     };
@@ -167,7 +181,8 @@ class RealAuthService implements AuthService {
         );
       }
       final credential = GoogleAuthProvider.credential(idToken: idToken);
-      final result = await FirebaseAuth.instance.signInWithCredential(credential);
+      final result =
+          await FirebaseAuth.instance.signInWithCredential(credential);
       return _profileFor(
         result.user,
         AuthProviderType.google,
@@ -282,7 +297,46 @@ class RealAuthService implements AuthService {
         email: email.trim(),
         password: password,
       );
+      await result.user?.sendEmailVerification();
       return _profileFor(result.user, AuthProviderType.emailPassword);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    await _ensureFirebaseInitialized();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw AuthException('Sign in again to verify your email.');
+      }
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<UserProfile?> reloadEmailPasswordUser() async {
+    await _ensureFirebaseInitialized();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      await user.reload();
+      return _profileFor(
+          FirebaseAuth.instance.currentUser, AuthProviderType.emailPassword);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _ensureFirebaseInitialized();
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (error) {
       throw _firebaseException(error);
     }
@@ -338,10 +392,9 @@ class RealAuthService implements AuthService {
         ],
       );
 
-      final String name = [
-        credential.givenName,
-        credential.familyName
-      ].where((element) => element != null && element.isNotEmpty).join(' ');
+      final String name = [credential.givenName, credential.familyName]
+          .where((element) => element != null && element.isNotEmpty)
+          .join(' ');
 
       return UserProfile(
         id: credential.userIdentifier ?? '',
@@ -381,7 +434,8 @@ class RealAuthService implements AuthService {
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
-            final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+            final userCredential =
+                await FirebaseAuth.instance.signInWithCredential(credential);
             final user = userCredential.user;
             if (user != null) {
               onAutoVerified(
@@ -394,7 +448,8 @@ class RealAuthService implements AuthService {
               );
             }
           } catch (e) {
-            onError(AuthException('Auto-verification failed: $e', code: 'AUTO_VERIFY_FAILED'));
+            onError(AuthException('Auto-verification failed: $e',
+                code: 'AUTO_VERIFY_FAILED'));
           }
         },
         verificationFailed: (FirebaseAuthException e) {
@@ -437,7 +492,8 @@ class RealAuthService implements AuthService {
         smsCode: smsCode,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
 
       if (user != null) {

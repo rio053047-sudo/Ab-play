@@ -37,19 +37,31 @@ class MockPhoneAuthService implements AuthService {
   Future<UserProfile?> completeEmailLink({
     required String email,
     required String emailLink,
-  }) async => null;
+  }) async =>
+      null;
 
   @override
   Future<UserProfile?> signInWithEmailPassword({
     required String email,
     required String password,
-  }) async => null;
+  }) async =>
+      null;
 
   @override
   Future<UserProfile?> createEmailPasswordAccount({
     required String email,
     required String password,
-  }) async => null;
+  }) async =>
+      null;
+
+  @override
+  Future<void> sendEmailVerification() async {}
+
+  @override
+  Future<UserProfile?> reloadEmailPasswordUser() async => null;
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
   Future<void> verifyPhoneNumber({
@@ -95,7 +107,9 @@ void main() {
     );
   }
 
-  testWidgets('LoginScreen displays "Continue with Phone Number" button and navigates to PhoneLoginScreen', (WidgetTester tester) async {
+  testWidgets(
+      'LoginScreen displays "Continue with Phone Number" button and navigates to PhoneLoginScreen',
+      (WidgetTester tester) async {
     final mockService = MockPhoneAuthService();
     await tester.pumpWidget(createWidgetUnderTest(mockService));
 
@@ -108,7 +122,8 @@ void main() {
     expect(find.text('+91'), findsOneWidget);
   });
 
-  testWidgets('Email sign-in sheet offers passwordless and password methods', (WidgetTester tester) async {
+  testWidgets('Email sign-in sheet offers passwordless and password methods',
+      (WidgetTester tester) async {
     final mockService = MockPhoneAuthService();
     await tester.pumpWidget(createWidgetUnderTest(mockService));
 
@@ -117,10 +132,15 @@ void main() {
 
     expect(find.text('Email me a secure sign-in link'), findsOneWidget);
     expect(find.text('Sign in with password'), findsOneWidget);
+    expect(find.text('New to Ab-Play? Create an account'), findsOneWidget);
+    await tester.tap(find.text('New to Ab-Play? Create an account'));
+    await tester.pumpAndSettle();
     expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Confirm password'), findsOneWidget);
   });
 
-  testWidgets('PhoneLoginScreen validates 10-digit phone number entry', (WidgetTester tester) async {
+  testWidgets('PhoneLoginScreen validates 10-digit phone number entry',
+      (WidgetTester tester) async {
     final mockService = MockPhoneAuthService();
     await tester.pumpWidget(createWidgetUnderTest(mockService));
 
@@ -131,7 +151,8 @@ void main() {
     await tester.tap(find.text('Get OTP'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Please enter a valid 10-digit mobile number'), findsOneWidget);
+    expect(find.text('Please enter a valid 10-digit mobile number'),
+        findsOneWidget);
 
     // Enter valid 10-digit number and submit
     await tester.enterText(find.byType(TextField), '9876543210');
@@ -143,7 +164,9 @@ void main() {
     expect(find.text('Code sent to +919876543210'), findsOneWidget);
   });
 
-  testWidgets('OtpVerificationScreen allows entering 6-digit OTP and authenticating', (WidgetTester tester) async {
+  testWidgets(
+      'OtpVerificationScreen allows entering 6-digit OTP and authenticating',
+      (WidgetTester tester) async {
     final mockService = MockPhoneAuthService();
     await tester.pumpWidget(createWidgetUnderTest(mockService));
 
@@ -160,7 +183,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // User is authenticated
-    final vm = Provider.of<AuthViewModel>(tester.element(find.byType(LoginScreen)), listen: false);
+    final vm = Provider.of<AuthViewModel>(
+        tester.element(find.byType(LoginScreen)),
+        listen: false);
     expect(vm.status, AuthStatus.authenticated);
     expect(vm.user?.phoneNumber, '+919876543210');
   });

@@ -23,6 +23,7 @@ class UserProfile {
   final String? phoneNumber;
   final String? photoUrl;
   final AuthProviderType provider;
+  final bool emailVerified;
 
   UserProfile({
     required this.id,
@@ -31,5 +32,6 @@ class UserProfile {
     this.phoneNumber,
     this.photoUrl,
     required this.provider,
+    this.emailVerified = true,
   });
 }

@@ -1,7 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ab_play/main.dart';
+import 'package:ab_play/models/user_profile.dart';
+import 'package:ab_play/services/auth_service.dart';
 import 'package:ab_play/widgets/social_button.dart';
+
+class TestAuthService extends AuthService {
+  @override
+  Future<UserProfile?> signInWithGoogle() async => null;
+
+  @override
+  Future<UserProfile?> signInWithFacebook() async => null;
+
+  @override
+  Future<UserProfile?> signInWithApple() async => null;
+
+  @override
+  Future<UserProfile?> signInWithTwitter() async => null;
+
+  @override
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(AuthException error) onError,
+    required void Function(UserProfile profile) onAutoVerified,
+  }) async {}
+
+  @override
+  Future<UserProfile?> signInWithPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+  }) async => null;
+
+  @override
+  Future<void> signOut() async {}
+}
 
 void main() {
   testWidgets('Ab-Play login screen renders branding and login buttons', (WidgetTester tester) async {
@@ -12,7 +45,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AbPlayApp());
+    await tester.pumpWidget(AbPlayApp(authService: TestAuthService()));
     await tester.pumpAndSettle();
 
     // Verify Title & Subtitle

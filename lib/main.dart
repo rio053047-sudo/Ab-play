@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_shell.dart';
+import 'services/auth_service.dart';
 import 'services/real_auth_service.dart';
 import 'services/localization_service.dart';
 import 'theme/app_theme.dart';
@@ -22,14 +25,22 @@ void main() {
 }
 
 class AbPlayApp extends StatelessWidget {
-  const AbPlayApp({super.key});
+  final AuthService? authService;
+
+  const AbPlayApp({super.key, this.authService});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => AuthViewModel(authService: RealAuthService()),
+          create: (_) {
+            final viewModel = AuthViewModel(
+              authService: authService ?? RealAuthService(),
+            );
+            unawaited(viewModel.initialize());
+            return viewModel;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(),
@@ -66,6 +77,11 @@ class AbPlayApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           home: Consumer<AuthViewModel>(
             builder: (context, authVM, child) {
+              if (authVM.isInitializing) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
               if (authVM.isLoggedIn) {
                 return const MainNavigationShell();
               }

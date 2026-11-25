@@ -4,9 +4,12 @@ enum AuthProviderType {
   apple,
   twitter,
   phone,
+  emailLink,
+  emailPassword,
 }
 
 enum AuthStatus {
+  initializing,
   unauthenticated,
   authenticating,
   authenticated,

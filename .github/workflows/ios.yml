@@ -1,44 +1,82 @@
-name: iOS starter workflow
+name: iOS Flutter CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build and Test default scheme using any available iPhone simulator
+  build-and-test:
+    name: Analyze, test, and build iOS
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set Default Scheme
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze authentication changes
+        run: >-
+          flutter analyze --no-pub
+          lib/models/user_profile.dart
+          lib/services/auth_service.dart
+          lib/services/real_auth_service.dart
+          lib/viewmodels/auth_viewmodel.dart
+          lib/screens/email_sign_in_sheet.dart
+          test/auth_viewmodel_test.dart
+          test/phone_auth_widget_test.dart
+
+      - name: Run authentication and login tests
+        run: >-
+          flutter test --no-pub
+          test/auth_viewmodel_test.dart
+          test/phone_auth_widget_test.dart
+          test/widget_test.dart
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: List iOS workspace schemes
+        working-directory: ios
+        run: xcodebuild -list -json -workspace Runner.xcworkspace
+
+      - name: Select an available iPhone simulator
+        id: simulator
         run: |
-          scheme_list=$(xcodebuild -list -json | tr -d "\n")
-          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
-          echo $default | cat >default
-          echo Using default scheme: $default
-      - name: Build
+          device_id="$(xcrun simctl list devices available -j | ruby -rjson -e 'device = JSON.parse(STDIN.read)["devices"].values.flatten.find { |item| item["isAvailable"] && item["name"].start_with?("iPhone") }; abort "No available iPhone simulator found" unless device; puts device["udid"]')"
+          echo "destination=platform=iOS Simulator,id=${device_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Build iOS tests
+        working-directory: ios
         env:
-          scheme: ${{ 'default' }}
-          platform: ${{ 'iOS Simulator' }}
-        run: |
-          # xcrun xctrace returns via stderr, not the expected stdout (see https://developer.apple.com/forums/thread/663959)
-          device=`xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//"`
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild build-for-testing -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device"
-      - name: Test
+          destination: ${{ steps.simulator.outputs.destination }}
+        run: >-
+          xcodebuild build-for-testing
+          -workspace Runner.xcworkspace
+          -scheme Runner
+          -destination "$destination"
+          CODE_SIGNING_ALLOWED=NO
+
+      - name: Run iOS tests
+        working-directory: ios
         env:
-          scheme: ${{ 'default' }}
-          platform: ${{ 'iOS Simulator' }}
-        run: |
-          # xcrun xctrace returns via stderr, not the expected stdout (see https://developer.apple.com/forums/thread/663959)
-          device=`xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//"`
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild test-without-building -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device"
+          destination: ${{ steps.simulator.outputs.destination }}
+        run: >-
+          xcodebuild test-without-building
+          -workspace Runner.xcworkspace
+          -scheme Runner
+          -destination "$destination"
+          CODE_SIGNING_ALLOWED=NO

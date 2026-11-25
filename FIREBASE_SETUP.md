@@ -7,7 +7,7 @@ The app uses Firebase Authentication for Google, email-link, email/password, and
 1. Open **Project settings** and register the Android app with package name `com.abplay.app`.
 2. Add the SHA-1 and SHA-256 certificate fingerprints for every signing certificate used to install the app (debug, local release, and Play App Signing as applicable).
 3. Download that Android app's `google-services.json` and place it at `android/app/google-services.json`. The file is ignored by Git.
-4. In **Authentication → Sign-in method**, enable **Email/Password**, **Email link (passwordless sign-in)**, and **Google**. Email link requires Email/Password to remain enabled.
+4. In **Authentication → Sign-in method**, enable **Email/Password**, **Email link (passwordless sign-in)**, **Google**, and **Phone** if phone SMS sign-in is used. Email link requires Email/Password to remain enabled.
 5. In **Authentication → Settings → Authorized domains**, authorize `abplay.app` for the email action's continue URL.
 6. In the Android app settings, verify the package name and signing fingerprints are saved. Configure the project's mobile email-link domain as its Firebase Hosting default domain (`<PROJECT_ID>.firebaseapp.com`) in the Firebase Authentication project configuration. If the project still points at Firebase Dynamic Links, update `mobileLinksConfig.domain` with the Firebase Admin SDK using an authorized server environment. Firebase Hosting email links use `/__/auth/links`; this app does not use Firebase Dynamic Links.
 7. For Google sign-in, set the Web OAuth client ID from this Firebase project's Google provider configuration as the `GOOGLE_SERVER_CLIENT_ID` Dart define when launching/building the app. It is an OAuth client identifier, not a service-account credential.

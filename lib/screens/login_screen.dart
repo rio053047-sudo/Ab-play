@@ -9,6 +9,7 @@ import '../theme/app_typography.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/social_button.dart';
 import 'help_and_legal.dart';
+import 'email_sign_in_sheet.dart';
 import 'phone_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -73,7 +74,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final authViewModel = Provider.of<AuthViewModel>(context);
 
     // Show error snackbar if error occurs
-    if (authViewModel.status == AuthStatus.error && authViewModel.errorMessage != null) {
+    if (authViewModel.status == AuthStatus.error &&
+        authViewModel.errorMessage != null &&
+        (ModalRoute.of(context)?.isCurrent ?? true)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showErrorSnackBar(context, authViewModel.errorMessage!);
         authViewModel.clearError();
@@ -222,6 +225,19 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
+                        ),
+
+                        TextButton.icon(
+                          onPressed: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (_) => const EmailSignInSheet(),
+                            );
+                          },
+                          icon: const Icon(Icons.email_outlined, size: 18),
+                          label: const Text('Sign in with email'),
                         ),
 
                         const SizedBox(height: 20),

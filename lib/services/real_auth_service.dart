@@ -1,19 +1,141 @@
 import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../models/user_profile.dart';
 import 'auth_service.dart';
 
 class RealAuthService implements AuthService {
+  static const _pendingEmailKey = 'abplay_pending_email_sign_in';
+  static const _androidPackageName = 'com.abplay.app';
+
   final String? serverClientId;
   bool _googleInitialized = false;
   bool _firebaseInitialized = false;
+  final AppLinks _appLinks = AppLinks();
+  final StreamController<String> _pendingEmailLinks =
+      StreamController<String>.broadcast();
+  StreamSubscription<Uri>? _appLinkSubscription;
 
   RealAuthService({this.serverClientId});
+
+  @override
+  Stream<String> get pendingEmailLinks => _pendingEmailLinks.stream;
+
+  @override
+  Future<void> initialize() async {
+    await _ensureFirebaseInitialized();
+    if (_appLinkSubscription != null) return;
+
+    _appLinkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) => unawaited(_handleIncomingEmailLink(uri)),
+      onError: (_) {},
+    );
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      await _handleIncomingEmailLink(initialLink);
+    }
+  }
+
+  @override
+  Future<UserProfile?> get currentUser async {
+    await _ensureFirebaseInitialized();
+    return _profile(FirebaseAuth.instance.currentUser);
+  }
+
+  @override
+  Stream<UserProfile?> get authStateChanges {
+    return FirebaseAuth.instance.authStateChanges().map(_profile);
+  }
+
+  Future<void> _handleIncomingEmailLink(Uri uri) async {
+    final link = uri.toString();
+    try {
+      await _ensureFirebaseInitialized();
+      final auth = FirebaseAuth.instance;
+      if (!auth.isSignInWithEmailLink(link)) return;
+
+      final preferences = await SharedPreferences.getInstance();
+      final email = preferences.getString(_pendingEmailKey);
+      if (email == null || email.isEmpty) {
+        _pendingEmailLinks.add(link);
+        return;
+      }
+
+      await _completeEmailLink(email: email, emailLink: link);
+    } on FirebaseAuthException {
+      _pendingEmailLinks.add(link);
+    } catch (_) {
+      _pendingEmailLinks.add(link);
+    }
+  }
+
+  UserProfile? _profile(User? user) {
+    if (user == null) return null;
+    final providerIds =
+        user.providerData.map((info) => info.providerId).toSet();
+    final provider = user.phoneNumber != null
+        ? AuthProviderType.phone
+        : providerIds.contains('google.com')
+            ? AuthProviderType.google
+            : AuthProviderType.emailPassword;
+    return UserProfile(
+      id: user.uid,
+      displayName:
+          user.displayName ?? user.email ?? user.phoneNumber ?? 'Ab-Play User',
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      photoUrl: user.photoURL,
+      provider: provider,
+      emailVerified: user.emailVerified,
+    );
+  }
+
+  UserProfile? _profileFor(User? user, AuthProviderType provider) {
+    final profile = _profile(user);
+    if (profile == null) return null;
+    return UserProfile(
+      id: profile.id,
+      displayName: profile.displayName,
+      email: profile.email,
+      phoneNumber: profile.phoneNumber,
+      photoUrl: profile.photoUrl,
+      provider: provider,
+      emailVerified: profile.emailVerified,
+    );
+  }
+
+  AuthException _firebaseException(FirebaseAuthException error) {
+    final message = switch (error.code) {
+      'invalid-email' => 'Enter a valid email address.',
+      'user-disabled' => 'This account has been disabled. Contact support.',
+      'user-not-found' ||
+      'wrong-password' ||
+      'invalid-credential' =>
+        'The email or password is incorrect.',
+      'email-already-in-use' => 'An account already exists for this email.',
+      'weak-password' => 'Choose a stronger password (at least 6 characters).',
+      'operation-not-allowed' =>
+        'Email/password sign-in is disabled in Firebase Console.',
+      'quota-exceeded' =>
+        'Email sending limit reached. Please try again later.',
+      'requires-recent-login' =>
+        'Sign in again before changing this account setting.',
+      'expired-action-code' ||
+      'invalid-action-code' =>
+        'This sign-in link is invalid or has expired. Request a new link.',
+      'network-request-failed' =>
+        'Check your internet connection and try again.',
+      'too-many-requests' => 'Too many attempts. Wait a little and try again.',
+      _ => error.message ?? 'Authentication failed. Please try again.',
+    };
+    return AuthException(message, code: error.code);
+  }
 
   Future<void> _ensureFirebaseInitialized() async {
     if (_firebaseInitialized) return;
@@ -24,7 +146,7 @@ class RealAuthService implements AuthService {
       _firebaseInitialized = true;
     } catch (e) {
       throw AuthException(
-        'Firebase is not initialized. Please configure google-services.json (Android) / GoogleService-Info.plist (iOS) and enable Phone Authentication in Firebase Console.\nDetails: $e',
+        'Firebase is not configured for this app. Add the Android google-services.json file, register the package and signing fingerprints in Firebase Console, and enable the required sign-in providers.\nDetails: $e',
         code: 'FIREBASE_NOT_CONFIGURED',
       );
     }
@@ -48,17 +170,27 @@ class RealAuthService implements AuthService {
   @override
   Future<UserProfile?> signInWithGoogle() async {
     try {
+      await _ensureFirebaseInitialized();
       await _ensureGoogleInitialized();
       final googleUser = await GoogleSignIn.instance.authenticate();
-      return UserProfile(
-        id: googleUser.id,
-        displayName: googleUser.displayName ?? 'Google User',
-        email: googleUser.email,
-        photoUrl: googleUser.photoUrl,
-        provider: AuthProviderType.google,
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null) {
+        throw AuthException(
+          'Google Sign-In did not return an ID token. Check the Android OAuth client and SHA fingerprints.',
+          code: 'GOOGLE_ID_TOKEN_MISSING',
+        );
+      }
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final result =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      return _profileFor(
+        result.user,
+        AuthProviderType.google,
       );
     } catch (e) {
+      if (e is AuthException) rethrow;
       final String message = e.toString();
+      if (message.toLowerCase().contains('cancel')) return null;
       if (message.contains('serverClientId must be provided on Android')) {
         throw AuthException(
           'Google Sign-In requires a serverClientId on Android.\n\n'
@@ -74,6 +206,139 @@ class RealAuthService implements AuthService {
         'Google Sign-In configuration is missing or invalid. Please configure Google OAuth Client ID and SHA-1 certificate in Firebase / Google Developer Console.\nDetails: $e',
         code: 'GOOGLE_CONFIG_REQUIRED',
       );
+    }
+  }
+
+  @override
+  Future<void> sendEmailSignInLink(String email) async {
+    await _ensureFirebaseInitialized();
+    final normalizedEmail = email.trim();
+    final configuredLinkDomain =
+        const String.fromEnvironment('FIREBASE_EMAIL_LINK_DOMAIN').trim();
+    final settings = ActionCodeSettings(
+      url: 'https://abplay.app/finishSignUp',
+      handleCodeInApp: true,
+      androidPackageName: _androidPackageName,
+      androidInstallApp: true,
+      androidMinimumVersion: '1',
+      linkDomain: configuredLinkDomain.isEmpty ? null : configuredLinkDomain,
+    );
+    try {
+      await FirebaseAuth.instance.sendSignInLinkToEmail(
+        email: normalizedEmail,
+        actionCodeSettings: settings,
+      );
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(_pendingEmailKey, normalizedEmail);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<UserProfile?> completeEmailLink({
+    required String email,
+    required String emailLink,
+  }) async {
+    try {
+      return await _completeEmailLink(email: email, emailLink: emailLink);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  Future<UserProfile?> _completeEmailLink({
+    required String email,
+    required String emailLink,
+  }) async {
+    await _ensureFirebaseInitialized();
+    final auth = FirebaseAuth.instance;
+    if (!auth.isSignInWithEmailLink(emailLink)) {
+      throw AuthException(
+        'This does not look like a valid Ab-Play sign-in link. Request a new one.',
+        code: 'INVALID_EMAIL_LINK',
+      );
+    }
+
+    final result = await auth.signInWithEmailLink(
+      email: email.trim(),
+      emailLink: emailLink,
+    );
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_pendingEmailKey);
+    return _profileFor(result.user, AuthProviderType.emailLink);
+  }
+
+  @override
+  Future<UserProfile?> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    await _ensureFirebaseInitialized();
+    try {
+      final result = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      return _profileFor(result.user, AuthProviderType.emailPassword);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<UserProfile?> createEmailPasswordAccount({
+    required String email,
+    required String password,
+  }) async {
+    await _ensureFirebaseInitialized();
+    try {
+      final result = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      await result.user?.sendEmailVerification();
+      return _profileFor(result.user, AuthProviderType.emailPassword);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    await _ensureFirebaseInitialized();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw AuthException('Sign in again to verify your email.');
+      }
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<UserProfile?> reloadEmailPasswordUser() async {
+    await _ensureFirebaseInitialized();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      await user.reload();
+      return _profileFor(
+          FirebaseAuth.instance.currentUser, AuthProviderType.emailPassword);
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _ensureFirebaseInitialized();
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (error) {
+      throw _firebaseException(error);
     }
   }
 
@@ -127,10 +392,9 @@ class RealAuthService implements AuthService {
         ],
       );
 
-      final String name = [
-        credential.givenName,
-        credential.familyName
-      ].where((element) => element != null && element.isNotEmpty).join(' ');
+      final String name = [credential.givenName, credential.familyName]
+          .where((element) => element != null && element.isNotEmpty)
+          .join(' ');
 
       return UserProfile(
         id: credential.userIdentifier ?? '',
@@ -170,7 +434,8 @@ class RealAuthService implements AuthService {
         timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
-            final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+            final userCredential =
+                await FirebaseAuth.instance.signInWithCredential(credential);
             final user = userCredential.user;
             if (user != null) {
               onAutoVerified(
@@ -183,7 +448,8 @@ class RealAuthService implements AuthService {
               );
             }
           } catch (e) {
-            onError(AuthException('Auto-verification failed: $e', code: 'AUTO_VERIFY_FAILED'));
+            onError(AuthException('Auto-verification failed: $e',
+                code: 'AUTO_VERIFY_FAILED'));
           }
         },
         verificationFailed: (FirebaseAuthException e) {
@@ -226,7 +492,8 @@ class RealAuthService implements AuthService {
         smsCode: smsCode,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
 
       if (user != null) {
@@ -248,12 +515,19 @@ class RealAuthService implements AuthService {
 
   @override
   Future<void> signOut() async {
-    try {
-      await GoogleSignIn.instance.signOut();
-      await FacebookAuth.instance.logOut();
-      if (_firebaseInitialized) {
-        await FirebaseAuth.instance.signOut();
+    await _ensureFirebaseInitialized();
+    await FirebaseAuth.instance.signOut();
+    if (_googleInitialized) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {
+        // Firebase has already ended the app session.
       }
-    } catch (_) {}
+    }
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (_) {
+      // Firebase sign-out has already completed; no Facebook session may exist.
+    }
   }
 }

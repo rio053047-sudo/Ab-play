@@ -6,6 +6,23 @@ import 'package:ab_play/viewmodels/auth_viewmodel.dart';
 class MockAuthService implements AuthService {
   bool shouldFail = false;
   bool shouldCancel = false;
+  String? sentEmail;
+  UserProfile? restoredUser;
+  bool verified = true;
+  String? resetEmail;
+  int verificationEmailsSent = 0;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<UserProfile?> get currentUser async => restoredUser;
+
+  @override
+  Stream<UserProfile?> get authStateChanges => const Stream.empty();
+
+  @override
+  Stream<String> get pendingEmailLinks => const Stream.empty();
 
   @override
   Future<UserProfile?> signInWithGoogle() async {
@@ -45,6 +62,68 @@ class MockAuthService implements AuthService {
   }
 
   @override
+  Future<void> sendEmailSignInLink(String email) async {
+    if (shouldFail) throw AuthException('Email link error', code: 'ERR');
+    sentEmail = email;
+  }
+
+  @override
+  Future<UserProfile?> completeEmailLink({
+    required String email,
+    required String emailLink,
+  }) async =>
+      UserProfile(
+        id: 'email_link_123',
+        displayName: 'Email Link User',
+        email: email,
+        provider: AuthProviderType.emailLink,
+      );
+
+  @override
+  Future<UserProfile?> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async =>
+      UserProfile(
+        id: 'email_password_123',
+        displayName: 'Password User',
+        email: email,
+        provider: AuthProviderType.emailPassword,
+      );
+
+  @override
+  Future<UserProfile?> createEmailPasswordAccount({
+    required String email,
+    required String password,
+  }) async =>
+      UserProfile(
+        id: 'new_email_password',
+        displayName: 'New User',
+        email: email,
+        provider: AuthProviderType.emailPassword,
+        emailVerified: false,
+      );
+
+  @override
+  Future<void> sendEmailVerification() async {
+    verificationEmailsSent++;
+  }
+
+  @override
+  Future<UserProfile?> reloadEmailPasswordUser() async => UserProfile(
+        id: 'email_password_123',
+        displayName: 'Password User',
+        email: restoredUser?.email ?? 'user@example.com',
+        provider: AuthProviderType.emailPassword,
+        emailVerified: verified,
+      );
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    resetEmail = email;
+  }
+
+  @override
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required void Function(String verificationId, int? resendToken) onCodeSent,
@@ -63,7 +142,9 @@ class MockAuthService implements AuthService {
     required String verificationId,
     required String smsCode,
   }) async {
-    if (shouldFail) throw AuthException('Invalid OTP Code', code: 'INVALID_OTP');
+    if (shouldFail) {
+      throw AuthException('Invalid OTP Code', code: 'INVALID_OTP');
+    }
     return UserProfile(
       id: 'phone_999',
       displayName: 'Phone User',
@@ -92,6 +173,21 @@ void main() {
       expect(viewModel.errorMessage, null);
     });
 
+    test('Firebase session is restored during initialization', () async {
+      mockAuthService.restoredUser = UserProfile(
+        id: 'firebase_uid_123',
+        displayName: 'Returning player',
+        email: 'player@gmail.com',
+        provider: AuthProviderType.emailPassword,
+      );
+
+      await viewModel.initialize();
+
+      expect(viewModel.isLoggedIn, isTrue);
+      expect(viewModel.user?.id, 'firebase_uid_123');
+      expect(viewModel.status, AuthStatus.authenticated);
+    });
+
     test('Successful Google Login updates user and status', () async {
       final success = await viewModel.loginWithGoogle();
 
@@ -99,6 +195,61 @@ void main() {
       expect(viewModel.status, AuthStatus.authenticated);
       expect(viewModel.user?.displayName, 'Test Google User');
       expect(viewModel.user?.provider, AuthProviderType.google);
+    });
+
+    test('Email link request records the destination email', () async {
+      final sent = await viewModel.sendEmailSignInLink('player@gmail.com');
+
+      expect(sent, isTrue);
+      expect(mockAuthService.sentEmail, 'player@gmail.com');
+      expect(viewModel.emailLinkSent, isTrue);
+      expect(viewModel.status, AuthStatus.unauthenticated);
+    });
+
+    test('Email/password login updates the authenticated profile', () async {
+      final signedIn = await viewModel.loginWithEmailPassword(
+        'player@gmail.com',
+        'correct-horse',
+      );
+
+      expect(signedIn, isTrue);
+      expect(viewModel.user?.email, 'player@gmail.com');
+      expect(viewModel.user?.provider, AuthProviderType.emailPassword);
+    });
+
+    test('New password accounts require email verification before Home',
+        () async {
+      final created = await viewModel.createEmailPasswordAccount(
+        'new@example.com',
+        'strong-password',
+      );
+
+      expect(created, isTrue);
+      expect(viewModel.requiresEmailVerification, isTrue);
+      expect(viewModel.isLoggedIn, isFalse);
+      expect(viewModel.emailVerificationSent, isTrue);
+      expect(viewModel.accountNotice, contains('Verification email sent'));
+    });
+
+    test('Password reset uses the entered address and confirms generically',
+        () async {
+      final sent = await viewModel.sendEmailPasswordReset('player@example.com');
+
+      expect(sent, isTrue);
+      expect(mockAuthService.resetEmail, 'player@example.com');
+      expect(viewModel.accountNotice, contains('If an account exists'));
+    });
+
+    test('Refreshing verified email enables Home navigation', () async {
+      await viewModel.createEmailPasswordAccount(
+          'new@example.com', 'strong-password');
+      mockAuthService.verified = true;
+
+      final verified = await viewModel.refreshEmailVerification();
+
+      expect(verified, isTrue);
+      expect(viewModel.requiresEmailVerification, isFalse);
+      expect(viewModel.isLoggedIn, isTrue);
     });
 
     test('Canceled Facebook Login resets state to unauthenticated', () async {

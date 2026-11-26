@@ -1,0 +1,6 @@
+launcher_icons:
+  image_path: "assets/images/abplay_mascot.svg"
+  android:
+    generate: true
+  ios:
+    generate: true

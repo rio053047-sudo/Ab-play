@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isRoomMember(roomId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/voiceRooms/$(roomId)/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/voiceRooms/$(roomId)/members/$(request.auth.uid)).data.active == true;
+    }
+
+    match /voiceRooms/{roomId} {
+      allow get, list: if signedIn() &&
+        (resource.data.visibility == 'public' || isRoomMember(roomId));
+      allow create, update, delete: if false;
+
+      match /members/{memberId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if false;
+      }
+      match /seats/{seatId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if false;
+      }
+      match /events/{eventId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if false;
+      }
+      match /contributions/{memberId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if false;
+      }
+      match /dailyTasks/{date}/members/{memberId} {
+        allow read: if isRoomMember(roomId) && memberId == request.auth.uid;
+        allow write: if false;
+      }
+      match /bans/{memberId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /voiceRoomSecrets/{roomId} {
+      allow read, write: if false;
+    }
+    match /wallets/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+    match /giftTransactions/{transactionId} {
+      allow get: if signedIn() &&
+        (resource.data.senderUid == request.auth.uid || resource.data.recipientUid == request.auth.uid);
+      allow list, create, update, delete: if false;
+    }
+    match /users/{userId}/giftWall/{giftId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /voiceRoomReports/{reportId} {
+      allow read, write: if false;
+    }
+  }
+}

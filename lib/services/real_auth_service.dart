@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +19,7 @@ class RealAuthService implements AuthService {
   final String? serverClientId;
   bool _googleInitialized = false;
   bool _firebaseInitialized = false;
+  bool _appCheckActivated = false;
   final AppLinks _appLinks = AppLinks();
   final StreamController<String> _pendingEmailLinks =
       StreamController<String>.broadcast();
@@ -142,6 +145,16 @@ class RealAuthService implements AuthService {
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
+      }
+      if (!_appCheckActivated && !kIsWeb) {
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: kDebugMode
+              ? AndroidProvider.debug
+              : AndroidProvider.playIntegrity,
+          appleProvider:
+              kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+        );
+        _appCheckActivated = true;
       }
       _firebaseInitialized = true;
     } catch (e) {

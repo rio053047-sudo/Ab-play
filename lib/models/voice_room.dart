@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 enum RoomRole {
   host,
   admin,
@@ -21,6 +19,7 @@ class VoiceRoomSeat {
   String? userId;
   String? userName;
   String? userAvatar;
+  int? rtcUid;
   bool isLocked;
   bool isMutedByHost;
   bool isMicOpen;
@@ -32,6 +31,7 @@ class VoiceRoomSeat {
     this.userId,
     this.userName,
     this.userAvatar,
+    this.rtcUid,
     this.isLocked = false,
     this.isMutedByHost = false,
     this.isMicOpen = false,
@@ -105,11 +105,13 @@ class VoiceRoomModel {
   final String id;
   String title;
   String description;
+  String coverPath;
   final String hostId;
   final String hostName;
   final String hostAvatar;
   RoomTag tag;
   bool isPrivate;
+  bool isLocked;
   String? passcode;
   int roomLevel;
   int currentExp;
@@ -125,22 +127,26 @@ class VoiceRoomModel {
     required this.id,
     required this.title,
     this.description = 'Welcome to the Ab-Play Voice Room!',
+    this.coverPath = '',
     required this.hostId,
     required this.hostName,
     this.hostAvatar = '',
     this.tag = RoomTag.party,
     this.isPrivate = false,
+    this.isLocked = false,
     this.passcode,
     this.roomLevel = 1,
     this.currentExp = 120,
     this.maxExp = 1000,
-    this.maxCapacity = 50,
+    this.maxCapacity = 8,
     this.onlineCount = 1,
-    this.announcement = 'Welcome to our room! Please be respectful and enjoy the party.',
+    this.announcement =
+        'Welcome to our room! Please be respectful and enjoy the party.',
     List<VoiceRoomSeat>? seats,
     List<String>? adminIds,
     List<String>? bannedUserIds,
-  })  : seats = seats ?? List.generate(8, (index) => VoiceRoomSeat(index: index)),
+  })  : seats =
+            seats ?? List.generate(8, (index) => VoiceRoomSeat(index: index)),
         adminIds = adminIds ?? [],
         bannedUserIds = bannedUserIds ?? [];
 

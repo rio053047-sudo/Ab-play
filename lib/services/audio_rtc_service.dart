@@ -8,13 +8,21 @@ abstract class AudioRtcService {
   ValueListenable<bool> get isMicrophoneMuted;
   ValueListenable<bool> get isAudioOutputMuted;
   ValueListenable<double> get localAudioLevel;
+  ValueListenable<String> get connectionStatus;
   Stream<Map<String, double>> get remoteAudioLevels;
+  Stream<void> get reconnected;
 
   Future<void> joinChannel({
     required String roomId,
     required String userId,
     required bool isSpeaker,
+    required String appId,
+    required String token,
+    required int rtcUid,
+    required Future<String> Function() refreshToken,
   });
+  Future<void> updatePublisherRole(
+      {required bool canPublish, required String token});
 
   Future<void> leaveChannel();
   Future<void> toggleMicrophone(bool mute);
@@ -29,25 +37,20 @@ abstract class AudioRtcService {
 /// secret in the Flutter app. Production room tokens must come from a trusted
 /// backend and be generated for the actual channel and user.
 class RealAudioRtcService implements AudioRtcService {
-  RealAudioRtcService({
-    String? appId,
-    String? token,
-  })  : _appId = appId ??
-            const String.fromEnvironment(
-              'AGORA_APP_ID',
-              defaultValue: '09a63b833352446c89b5aa2cc5e11f28',
-            ),
-        _token = token ??
-            const String.fromEnvironment('AGORA_TEMP_TOKEN');
+  RealAudioRtcService();
 
-  final String _appId;
-  final String _token;
+  String _token = '';
+  Future<String> Function()? _refreshToken;
 
   final ValueNotifier<bool> _isMicrophoneMuted = ValueNotifier<bool>(true);
   final ValueNotifier<bool> _isAudioOutputMuted = ValueNotifier<bool>(false);
   final ValueNotifier<double> _localAudioLevel = ValueNotifier<double>(0);
+  final ValueNotifier<String> _connectionStatus =
+      ValueNotifier<String>('disconnected');
   final StreamController<Map<String, double>> _remoteAudioLevelsController =
       StreamController<Map<String, double>>.broadcast();
+  final StreamController<void> _reconnectedController =
+      StreamController<void>.broadcast();
 
   RtcEngine? _engine;
   bool _joined = false;
@@ -61,31 +64,27 @@ class RealAudioRtcService implements AudioRtcService {
 
   @override
   ValueListenable<double> get localAudioLevel => _localAudioLevel;
+  @override
+  ValueListenable<String> get connectionStatus => _connectionStatus;
 
   @override
   Stream<Map<String, double>> get remoteAudioLevels =>
       _remoteAudioLevelsController.stream;
+  @override
+  Stream<void> get reconnected => _reconnectedController.stream;
 
-  Future<void> _ensureEngine() async {
+  Future<void> _ensureEngine(String appId) async {
     if (_engine != null) return;
-    if (_appId.isEmpty) {
+    if (!RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(appId)) {
       throw StateError(
-        'Agora App ID is missing. Build with --dart-define=AGORA_APP_ID=YOUR_APP_ID.',
-      );
-    }
-    if (_token.isEmpty) {
-      throw StateError(
-        'Agora token is missing. For the initial test, provide a temporary '
-        'token for this exact channel. Production tokens must come from a '
-        'trusted backend.',
-      );
+          'The RTC service returned an invalid App ID. Check Agora server configuration.');
     }
 
     final engine = createAgoraRtcEngine();
     await engine.initialize(
       RtcEngineContext(
-        appId: _appId,
-        channelProfile: ChannelProfileType.channelProfileCommunication,
+        appId: appId,
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
       ),
     );
     await engine.enableAudio();
@@ -95,10 +94,23 @@ class RealAudioRtcService implements AudioRtcService {
           debugPrint('Agora RTC error: $error - $message');
         },
         onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          _connectionStatus.value = 'connected';
           debugPrint('Agora joined channel: ${connection.channelId}');
+        },
+        onConnectionStateChanged: (RtcConnection connection,
+            ConnectionStateType state, ConnectionChangedReasonType reason) {
+          _connectionStatus.value = switch (state) {
+            ConnectionStateType.connectionStateConnected => 'connected',
+            ConnectionStateType.connectionStateReconnecting => 'reconnecting',
+            ConnectionStateType.connectionStateConnecting => 'connecting',
+            _ => 'disconnected',
+          };
         },
         onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
           debugPrint('Agora remote user joined: $remoteUid');
+        },
+        onRejoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          _reconnectedController.add(null);
         },
         onUserOffline: (
           RtcConnection connection,
@@ -107,8 +119,43 @@ class RealAudioRtcService implements AudioRtcService {
         ) {
           debugPrint('Agora remote user left: $remoteUid ($reason)');
         },
+        onTokenPrivilegeWillExpire:
+            (RtcConnection connection, String token) async {
+          final refresh = _refreshToken;
+          if (refresh == null) return;
+          try {
+            _token = await refresh();
+            await engine.renewToken(_token);
+          } catch (error) {
+            debugPrint('Could not refresh Agora token: $error');
+          }
+        },
+        onRequestToken: (RtcConnection connection) async {
+          final refresh = _refreshToken;
+          if (refresh == null) return;
+          try {
+            _token = await refresh();
+            await engine.renewToken(_token);
+          } catch (error) {
+            debugPrint('Agora requested a token but refresh failed: $error');
+          }
+        },
+        onAudioVolumeIndication: (RtcConnection connection,
+            List<AudioVolumeInfo> speakers, int totalVolume, int vad) {
+          final levels = <String, double>{};
+          for (final speaker in speakers) {
+            if (speaker.uid == connection.localUid) {
+              _localAudioLevel.value = (speaker.volume ?? 0) / 255.0;
+            } else {
+              levels['${speaker.uid}'] = (speaker.volume ?? 0) / 255.0;
+            }
+          }
+          _remoteAudioLevelsController.add(levels);
+        },
       ),
     );
+    await engine.enableAudioVolumeIndication(
+        interval: 200, smooth: 3, reportVad: true);
     _engine = engine;
   }
 
@@ -117,38 +164,75 @@ class RealAudioRtcService implements AudioRtcService {
     required String roomId,
     required String userId,
     required bool isSpeaker,
+    required String appId,
+    required String token,
+    required int rtcUid,
+    required Future<String> Function() refreshToken,
   }) async {
     if (_joined) {
       await leaveChannel();
     }
 
-    final permission = await Permission.microphone.request();
-    if (isSpeaker && !permission.isGranted) {
-      throw StateError('Microphone permission is required to speak.');
+    if (isSpeaker) {
+      final permission = await Permission.microphone.request();
+      if (!permission.isGranted) {
+        throw StateError('Microphone permission is required to speak.');
+      }
     }
 
-    await _ensureEngine();
+    _token = token;
+    _refreshToken = refreshToken;
+    _connectionStatus.value = 'connecting';
+    await _ensureEngine(appId);
     final channelName = roomId.trim();
     if (channelName.isEmpty || channelName.length > 64) {
-      throw ArgumentError.value(roomId, 'roomId', 'Invalid Agora channel name.');
+      throw ArgumentError.value(
+          roomId, 'roomId', 'Invalid Agora channel name.');
     }
 
     await _engine!.joinChannel(
-      token: _token,
+      token: token,
       channelId: channelName,
-      uid: 0,
-      options: const ChannelMediaOptions(
-        channelProfile: ChannelProfileType.channelProfileCommunication,
-        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+      uid: rtcUid,
+      options: ChannelMediaOptions(
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
+        clientRoleType: ClientRoleType.clientRoleAudience,
         autoSubscribeAudio: true,
-        publishMicrophoneTrack: true,
+        publishMicrophoneTrack: isSpeaker,
         publishCameraTrack: false,
       ),
     );
+    await _engine!.setClientRole(
+        role: isSpeaker
+            ? ClientRoleType.clientRoleBroadcaster
+            : ClientRoleType.clientRoleAudience);
+    await _engine!.updateChannelMediaOptions(
+        ChannelMediaOptions(publishMicrophoneTrack: isSpeaker));
     _joined = true;
-    _isMicrophoneMuted.value = !isSpeaker;
-    await _engine!.muteLocalAudioStream(!isSpeaker);
+    _isMicrophoneMuted.value = true;
+    await _engine!.muteLocalAudioStream(true);
     _localAudioLevel.value = 0;
+  }
+
+  @override
+  Future<void> updatePublisherRole(
+      {required bool canPublish, required String token}) async {
+    if (!_joined || _engine == null) throw StateError('RTC is not connected.');
+    if (canPublish) {
+      final permission = await Permission.microphone.request();
+      if (!permission.isGranted) {
+        throw StateError('Microphone permission is required to speak.');
+      }
+    }
+    _token = token;
+    await _engine!.renewToken(token);
+    await _engine!.setClientRole(
+        role: canPublish
+            ? ClientRoleType.clientRoleBroadcaster
+            : ClientRoleType.clientRoleAudience);
+    await _engine!.updateChannelMediaOptions(
+        ChannelMediaOptions(publishMicrophoneTrack: canPublish));
+    await _engine!.muteLocalAudioStream(!canPublish);
   }
 
   @override
@@ -157,6 +241,7 @@ class RealAudioRtcService implements AudioRtcService {
       await _engine!.leaveChannel();
     }
     _joined = false;
+    _connectionStatus.value = 'disconnected';
     _isMicrophoneMuted.value = true;
     _localAudioLevel.value = 0;
   }
@@ -182,7 +267,7 @@ class RealAudioRtcService implements AudioRtcService {
     if (!_joined || _engine == null) {
       throw StateError('Join a Voice Room before changing speaker audio.');
     }
-    await _engine!.muteAllRemoteAudioStreams(mute);
+    await _engine!.setEnableSpeakerphone(!mute);
     _isAudioOutputMuted.value = mute;
   }
 
@@ -199,6 +284,8 @@ class RealAudioRtcService implements AudioRtcService {
     _isMicrophoneMuted.dispose();
     _isAudioOutputMuted.dispose();
     _localAudioLevel.dispose();
+    _connectionStatus.dispose();
     unawaited(_remoteAudioLevelsController.close());
+    unawaited(_reconnectedController.close());
   }
 }

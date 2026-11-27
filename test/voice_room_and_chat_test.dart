@@ -1,76 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ab_play/models/voice_room.dart';
 import 'package:ab_play/models/chat_model.dart';
-import 'package:ab_play/viewmodels/voice_room_viewmodel.dart';
 import 'package:ab_play/viewmodels/chat_viewmodel.dart';
 
 void main() {
-  group('VoiceRoomViewModel Tests', () {
-    test('takes and leaves seats with correct role updates', () async {
-      final roomVM = VoiceRoomViewModel();
-      roomVM.setLoggedInUser('test_u1', 'PlayerOne');
-
-      final testRoom = VoiceRoomModel(
-        id: 'r_test',
-        title: 'Test Party Room',
-        hostId: 'host_99',
-        hostName: 'RoomHost',
-      );
-
-      await roomVM.enterRoom(testRoom);
-      expect(roomVM.activeRoom, isNotNull);
-      expect(roomVM.isMicMuted, isTrue);
-
-      // Take Seat #0
-      roomVM.takeSeat(0);
-      expect(testRoom.seats[0].isOccupied, isTrue);
-      expect(testRoom.seats[0].userId, equals('test_u1'));
-      expect(roomVM.isMicMuted, isFalse);
-
-      // Step down
-      roomVM.leaveSeat();
-      expect(testRoom.seats[0].isOccupied, isFalse);
-      expect(roomVM.isMicMuted, isTrue);
-
-      await roomVM.leaveRoom();
-      expect(roomVM.activeRoom, isNull);
-    });
-
-    test('gifting deducts coins and triggers combo multiplier', () async {
-      final roomVM = VoiceRoomViewModel();
-      roomVM.setLoggedInUser('test_u1', 'PlayerOne');
-
-      final testRoom = VoiceRoomModel(
-        id: 'r_test2',
-        title: 'Gift Room',
-        hostId: 'host_99',
-        hostName: 'RoomHost',
-      );
-
-      await roomVM.enterRoom(testRoom);
-      int coinBalance = 500;
-
-      final gift = VoiceRoomViewModel.standardGifts.first; // Rose (10 coins)
-      final success = roomVM.sendGift(
-        gift: gift,
-        receiverName: 'RoomHost',
-        getCoinBalance: () => coinBalance,
-        deductCoins: (amount) => coinBalance -= amount,
-      );
-
-      expect(success, isTrue);
-      expect(coinBalance, equals(490));
-      expect(roomVM.lastSentGiftCombo, equals(1));
-
-      // Combo send
-      roomVM.sendGift(
-        gift: gift,
-        receiverName: 'RoomHost',
-        getCoinBalance: () => coinBalance,
-        deductCoins: (amount) => coinBalance -= amount,
-      );
-      expect(coinBalance, equals(480));
-      expect(roomVM.lastSentGiftCombo, equals(2));
+  group('VoiceRoomModel tests', () {
+    test('provides eight seats and supports display model occupancy', () {
+      final room = VoiceRoomModel(
+          id: 'room_abcd1234', title: 'Room', hostId: 'host', hostName: 'Host');
+      expect(room.maxCapacity, 8);
+      expect(room.seats, hasLength(8));
+      room.seats[1].occupy(uid: 'participant', name: 'Participant');
+      expect(room.seats[1].isOccupied, isTrue);
+      room.seats[1].leave();
+      expect(room.seats[1].isOccupied, isFalse);
     });
   });
 
@@ -89,7 +32,8 @@ void main() {
       chatVM.sendVoiceMessage(conv.id, 10);
       expect(conv.messages.last.type, equals(ChatMessageType.voice));
 
-      chatVM.sendRoomInvite(conv.id, roomId: 'room_101', roomTitle: 'Lofi Room');
+      chatVM.sendRoomInvite(conv.id,
+          roomId: 'room_101', roomTitle: 'Lofi Room');
       expect(conv.messages.last.type, equals(ChatMessageType.roomInvite));
     });
 

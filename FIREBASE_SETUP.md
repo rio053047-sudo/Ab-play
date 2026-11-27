@@ -45,3 +45,48 @@ For Google sign-in, set this in **Run → Edit Configurations → Additional run
 ```
 
 Firebase must be configured in Console and the app's Firebase configuration file must be supplied locally before real network authentication can be tested. Email/password users and their Firebase UIDs are retained by Firebase; Google sign-in now uses the Firebase UID as the app profile ID.
+
+## Voice Room backend and live RTC
+
+Voice Rooms use Firestore for room/member/seat/event/wallet records, Realtime Database for disconnect presence, Cloud Storage for room covers, Firebase callable Cloud Functions for permission-checked writes, and Agora RTC for live audio. Client writes to room records, seat assignments, wallets, gift transactions, and events are denied by the checked-in rules.
+
+1. In Firebase Console, enable **Cloud Firestore**, **Realtime Database**, and **Cloud Storage** for the same project. Set the Realtime Database URL in `google-services.json` (`firebase_database_url`). Keep the Android package name `com.abplay.app`.
+2. Enable **Cloud Functions** billing (Blaze plan is required for deployment and the Realtime Database trigger). Use Node.js 22 for Functions.
+3. In Agora Console, create an RTC project, copy its App ID and App Certificate, and enable token authentication. Enable **Co-host Authentication** so audience tokens cannot publish microphone audio. The App Certificate must remain server-side.
+4. From the repository root, select the Firebase project (`firebase use <project-id>`). Set the server secrets interactively; do not put their values in source files or commit them:
+
+   ```text
+   firebase functions:secrets:set AGORA_APP_ID
+   firebase functions:secrets:set AGORA_APP_CERTIFICATE
+   firebase functions:secrets:set ROOM_PASSWORD_PEPPER
+   ```
+
+   Use a cryptographically random value of at least 32 bytes for `ROOM_PASSWORD_PEPPER`. Keep a backup in the organization's secret manager; changing it prevents users from using existing private-room passwords until they are reset.
+5. In **App Check**, register the Android app. For local debug builds, use the debug provider and register the debug token printed by Firebase App Check in the Console. For release, register Play Integrity and configure the Play signing certificate. The callable backend enforces App Check.
+6. Deploy the backend and security rules from the root:
+
+   ```text
+   firebase deploy --only functions,firestore:rules,firestore:indexes,database,storage
+   ```
+
+7. Confirm the Cloud Functions Realtime Database trigger region matches the Realtime Database instance region. The configured callable region is `asia-south1`.
+8. Wallets start at **0 coins**. This repository has no payment/top-up provider; do not grant balances from Flutter. Before production gifts can be used, implement and review a trusted payment or administrative wallet-credit flow on the server.
+
+The Agora Flutter client now requires the App ID, channel-specific token, and unique RTC UID returned by the authenticated backend; it contains no fallback App ID or certificate. A successful local build does not prove Firebase deployment, Agora token validity, or two-device audio. Run the two-device verification below only after Firebase and Agora setup is complete.
+
+### Two Android phone verification checklist
+
+Use two physical Android phones, two separate Firebase accounts, the same deployed Firebase project, and the same production-configured Agora App ID. Install the same current build on both phones. Record the build SHA, user/room IDs, timestamp, and actual device results; never mark a step passed from emulator or unit-test results alone.
+
+1. Phone A signs in with Account A; Phone B signs in with Account B.
+2. Phone A creates a public room and shares its displayed room ID.
+3. Phone B finds the room in discovery and joins; both member lists show both Firebase UIDs.
+4. Have A speak while B confirms audible speech, then repeat B to A.
+5. Toggle each microphone off/on and confirm the other phone hears the change.
+6. Have the host assign and remove a participant's speaker seat; confirm both clients update.
+7. Send a gift only after the sender wallet is funded via the approved server flow; verify event animation, recipient coin-back policy, gift wall/history, and contribution rank.
+8. Leave/rejoin; verify participant counts and seats recover from server state.
+9. Create a private room; verify no password is rejected and the correct password is accepted.
+10. Disable Wi-Fi or mobile data briefly on one phone, restore it, and confirm RTC and presence reconnect without a duplicate member or gift transaction.
+
+No physical-device run or live Firebase/Agora deployment was performed as part of the code change; these results remain pending until executed and recorded.

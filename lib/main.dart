@@ -45,8 +45,15 @@ class AbPlayApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(),
         ),
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider<AuthViewModel, VoiceRoomViewModel>(
           create: (_) => VoiceRoomViewModel(),
+          update: (_, auth, rooms) {
+            final viewModel = rooms ?? VoiceRoomViewModel();
+            final profile = auth.user;
+            viewModel.setLoggedInUser(
+                profile?.id ?? '', profile?.displayName ?? 'Player');
+            return viewModel;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) => ChatViewModel(),

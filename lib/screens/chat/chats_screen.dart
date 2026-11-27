@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/chat_model.dart';
+import '../../models/voice_room.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 import '../../viewmodels/voice_room_viewmodel.dart';
@@ -13,7 +14,8 @@ class ChatsTabScreen extends StatefulWidget {
   State<ChatsTabScreen> createState() => _ChatsTabScreenState();
 }
 
-class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProviderStateMixin {
+class _ChatsTabScreenState extends State<ChatsTabScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -39,7 +41,8 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
         elevation: 0,
         title: const Text(
           'Chats & Friends',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -55,9 +58,13 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
                   if (chatVM.conversations.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                      child: Text('${chatVM.conversations.length}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: const BoxDecoration(
+                          color: AppColors.primary, shape: BoxShape.circle),
+                      child: Text('${chatVM.conversations.length}',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10)),
                     ),
                   ],
                 ],
@@ -71,9 +78,13 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
                   if (chatVM.friendRequests.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                      child: Text('${chatVM.friendRequests.length}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: const BoxDecoration(
+                          color: Colors.redAccent, shape: BoxShape.circle),
+                      child: Text('${chatVM.friendRequests.length}',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10)),
                     ),
                   ],
                 ],
@@ -95,14 +106,16 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
   Widget _buildConversationsTab(BuildContext context, ChatViewModel chatVM) {
     if (chatVM.conversations.isEmpty) {
       return const Center(
-        child: Text('No active conversations', style: TextStyle(color: Colors.white54)),
+        child: Text('No active conversations',
+            style: TextStyle(color: Colors.white54)),
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: chatVM.conversations.length,
-      separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+      separatorBuilder: (_, __) =>
+          const Divider(color: Colors.white12, height: 1),
       itemBuilder: (context, index) {
         final conv = chatVM.conversations[index];
         final lastMsg = conv.lastMessage;
@@ -121,9 +134,12 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
               CircleAvatar(
                 radius: 24,
                 backgroundColor: conv.isGroup ? Colors.teal : AppColors.primary,
-                child: Icon(conv.isGroup ? Icons.groups : Icons.person, color: Colors.white),
+                child: Icon(conv.isGroup ? Icons.groups : Icons.person,
+                    color: Colors.white),
               ),
-              if (!conv.isGroup && conv.participants.isNotEmpty && conv.participants.first.isOnline)
+              if (!conv.isGroup &&
+                  conv.participants.isNotEmpty &&
+                  conv.participants.first.isOnline)
                 Positioned(
                   right: 0,
                   bottom: 0,
@@ -133,7 +149,8 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
                     decoration: BoxDecoration(
                       color: Colors.greenAccent,
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF141221), width: 2),
+                      border:
+                          Border.all(color: const Color(0xFF141221), width: 2),
                     ),
                   ),
                 ),
@@ -141,7 +158,8 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
           ),
           title: Text(
             conv.title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
           ),
           subtitle: Text(
             lastMsg != null ? lastMsg.content : 'No messages yet',
@@ -150,7 +168,9 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
             overflow: TextOverflow.ellipsis,
           ),
           trailing: Text(
-            lastMsg != null ? '${lastMsg.timestamp.hour}:${lastMsg.timestamp.minute.toString().padLeft(2, '0')}' : '',
+            lastMsg != null
+                ? '${lastMsg.timestamp.hour}:${lastMsg.timestamp.minute.toString().padLeft(2, '0')}'
+                : '',
             style: const TextStyle(color: Colors.white38, fontSize: 11),
           ),
         );
@@ -166,119 +186,142 @@ class _ChatsTabScreenState extends State<ChatsTabScreen> with SingleTickerProvid
         if (chatVM.friendRequests.isNotEmpty) ...[
           const Text(
             'Friend Requests',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 8),
           ...chatVM.friendRequests.map((req) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1B2E),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Icon(Icons.person, color: Colors.white),
-              ),
-              title: Text(req.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.check_circle, color: Colors.greenAccent),
-                    onPressed: () => chatVM.acceptFriendRequest(req),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1B2E),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.primary,
+                    child: Icon(Icons.person, color: Colors.white),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.redAccent),
-                    onPressed: () => chatVM.rejectFriendRequest(req),
+                  title: Text(req.name,
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check_circle,
+                            color: Colors.greenAccent),
+                        onPressed: () => chatVM.acceptFriendRequest(req),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.redAccent),
+                        onPressed: () => chatVM.rejectFriendRequest(req),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          )),
+                ),
+              )),
           const SizedBox(height: 16),
         ],
 
         // Friends List Section
         const Text(
           'My Friends',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 8),
         ...chatVM.friends.map((friend) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1B2E),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: Stack(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: AppColors.secondary,
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                if (friend.isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle),
-                    ),
-                  ),
-              ],
-            ),
-            title: Text(friend.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text(friend.isOnline ? 'Online now' : 'Offline', style: TextStyle(color: friend.isOnline ? Colors.greenAccent : Colors.white38, fontSize: 11)),
-            trailing: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1B2E),
+                borderRadius: BorderRadius.circular(12),
               ),
-              onPressed: () {
-                final conv = chatVM.createOrGetDirectConversation(friend);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ConversationDetailScreen(conversation: conv)),
-                );
-              },
-              child: const Text('Chat', style: TextStyle(color: Colors.white, fontSize: 12)),
-            ),
-          ),
-        )),
+              child: ListTile(
+                leading: Stack(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: AppColors.secondary,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    if (friend.isOnline)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                              color: Colors.greenAccent,
+                              shape: BoxShape.circle),
+                        ),
+                      ),
+                  ],
+                ),
+                title: Text(friend.name,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: Text(friend.isOnline ? 'Online now' : 'Offline',
+                    style: TextStyle(
+                        color: friend.isOnline
+                            ? Colors.greenAccent
+                            : Colors.white38,
+                        fontSize: 11)),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () {
+                    final conv = chatVM.createOrGetDirectConversation(friend);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              ConversationDetailScreen(conversation: conv)),
+                    );
+                  },
+                  child: const Text('Chat',
+                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                ),
+              ),
+            )),
 
         const SizedBox(height: 16),
 
         // Add Friends Section
         const Text(
           'Discover Friends',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 8),
         ...chatVM.discoverUsers.map((user) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1B2E),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.indigoAccent,
-              child: Icon(Icons.person_add, color: Colors.white),
-            ),
-            title: Text(user.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            trailing: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1B2E),
+                borderRadius: BorderRadius.circular(12),
               ),
-              onPressed: () => chatVM.sendFriendRequest(user),
-              child: const Text('Add Friend', style: TextStyle(color: AppColors.primary, fontSize: 12)),
-            ),
-          ),
-        )),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.indigoAccent,
+                  child: Icon(Icons.person_add, color: Colors.white),
+                ),
+                title: Text(user.name,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                trailing: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () => chatVM.sendFriendRequest(user),
+                  child: const Text('Add Friend',
+                      style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                ),
+              ),
+            )),
       ],
     );
   }
@@ -290,7 +333,8 @@ class ConversationDetailScreen extends StatefulWidget {
   const ConversationDetailScreen({super.key, required this.conversation});
 
   @override
-  State<ConversationDetailScreen> createState() => _ConversationDetailScreenState();
+  State<ConversationDetailScreen> createState() =>
+      _ConversationDetailScreenState();
 }
 
 class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
@@ -325,7 +369,9 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E1B2E),
         elevation: 0,
-        title: Text(widget.conversation.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(widget.conversation.title,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.mic, color: AppColors.primary),
@@ -364,7 +410,8 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]),
+            gradient: const LinearGradient(
+                colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -375,29 +422,54 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                 children: [
                   Icon(Icons.mic, color: Colors.cyanAccent, size: 18),
                   SizedBox(width: 6),
-                  Text('Voice Room Invitation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Voice Room Invitation',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
                 ],
               ),
               const SizedBox(height: 6),
-              Text(msg.content, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(msg.content,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 8),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF6A11CB),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 ),
-                onPressed: () {
-                  final roomVM = Provider.of<VoiceRoomViewModel>(context, listen: false);
-                  final targetRoom = VoiceRoomLobbyScreen.defaultRooms.first;
-                  roomVM.enterRoom(targetRoom);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const VoiceRoomLiveScreen()),
-                  );
+                onPressed: () async {
+                  final roomVM =
+                      Provider.of<VoiceRoomViewModel>(context, listen: false);
+                  final metadata = msg.metadata ?? const <String, dynamic>{};
+                  final roomId = metadata['roomId'] as String?;
+                  if (roomId == null) return;
+                  final targetRoom = VoiceRoomModel(
+                      id: roomId,
+                      title: metadata['roomTitle'] as String? ?? 'Voice Room',
+                      hostId: '',
+                      hostName: 'Host');
+                  try {
+                    await roomVM.enterRoom(targetRoom);
+                    if (!context.mounted) return;
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const VoiceRoomLiveScreen()));
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            error.toString().replaceFirst('Bad state: ', ''))));
+                  }
                 },
-                child: const Text('Join Room Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                child: const Text('Join Room Now',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
               ),
             ],
           ),
@@ -420,7 +492,9 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
             children: [
               Icon(Icons.play_arrow_rounded, color: Colors.white),
               SizedBox(width: 8),
-              Text('Voice memo (5")', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+              Text('Voice memo (5")',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -472,13 +546,17 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Type a message...',
-                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                    hintStyle:
+                        const TextStyle(color: Colors.white38, fontSize: 12),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.send, color: AppColors.primary, size: 18),
+                      icon: const Icon(Icons.send,
+                          color: AppColors.primary, size: 18),
                       onPressed: () {
-                        chatVM.sendTextMessage(widget.conversation.id, _msgController.text);
+                        chatVM.sendTextMessage(
+                            widget.conversation.id, _msgController.text);
                         _msgController.clear();
                       },
                     ),
@@ -492,9 +570,11 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.amber),
+              icon: const Icon(Icons.emoji_emotions_outlined,
+                  color: Colors.amber),
               onPressed: () {
-                chatVM.sendTextMessage(widget.conversation.id, '🎉 Let’s Party! 🚀');
+                chatVM.sendTextMessage(
+                    widget.conversation.id, '🎉 Let’s Party! 🚀');
               },
             ),
           ],
@@ -508,7 +588,8 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF221F38),
-        title: const Text('Send Room Invite', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Send Room Invite',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
           'Invite conversation members to join "🎧 Chill Night Lofi & Chat"?',
           style: TextStyle(color: Colors.white70),
@@ -516,7 +597,8 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
